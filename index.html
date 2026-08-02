@@ -1,0 +1,2522 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>業者見積取り込みツール — ANDPAD用</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f8f6; color: #1a1a18; min-height: 100vh; }
+.app { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+h1 { font-size: 18px; font-weight: 600; margin-bottom: 0.2rem; }
+.subtitle { font-size: 13px; color: #888; margin-bottom: 2rem; }
+.step { display: none; } .step.active { display: block; }
+.steps-row { display: flex; align-items: flex-start; margin-bottom: 2rem; }
+.step-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.step-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; background: #efefed; border: 1px solid #ddd; color: #999; transition: all 0.2s; }
+.step-dot.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+.step-dot.done { background: #dcfce7; color: #16a34a; border-color: #86efac; }
+.step-line { flex: 1; height: 1px; background: #e0e0dc; margin-top: 14px; }
+.step-label { font-size: 10px; color: #999; margin-top: 4px; text-align: center; }
+.upload-zone { border: 2px dashed #ccc; border-radius: 14px; padding: 4rem 2rem; text-align: center; background: #fff; transition: all 0.15s; cursor: pointer; user-select: none; }
+.upload-zone.drag-over { background: #eff6ff; border-color: #2563eb; border-style: solid; }
+#fileInput { display: none; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; border: 1px solid #ccc; background: #fff; color: #333; font-size: 14px; cursor: pointer; font-family: inherit; transition: background 0.1s; }
+.btn:hover { background: #f5f5f3; }
+.btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+.btn-primary:hover { background: #1d4ed8; }
+.loading-box { border-radius: 12px; padding: 4rem 2rem; background: #fff; text-align: center; border: 1px solid #e8e8e4; }
+.spinner { width: 40px; height: 40px; border-radius: 50%; border: 3px solid #e5e7eb; border-top-color: #2563eb; animation: spin 0.7s linear infinite; margin: 0 auto 1.25rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.card { background: #fff; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.5rem; margin-bottom: 1.5rem; }
+.sheet-list { display: flex; flex-direction: column; gap: 8px; margin: 1rem 0 1.25rem; }
+.sheet-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px; border: 1.5px solid #e8e8e4; cursor: pointer; transition: all 0.1s; }
+.sheet-item:hover { border-color: #93c5fd; background: #f8fbff; }
+.sheet-item.on { border-color: #2563eb; background: #eff6ff; }
+.sheet-item input[type=checkbox] { width: 17px; height: 17px; accent-color: #2563eb; cursor: pointer; flex-shrink: 0; pointer-events: none; }
+.sheet-info { flex: 1; min-width: 0; }
+.sheet-name { font-size: 13px; font-weight: 500; color: #222; }
+.sheet-preview { font-size: 11px; color: #999; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
+.badge-matched { background: #dbeafe; color: #1d4ed8; }
+.badge-s { background: #dcfce7; color: #16a34a; }
+.badge-d { background: #fef9c3; color: #a16207; }
+.badge-o { background: #f3f4f6; color: #6b7280; }
+.detected-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #1d4ed8; display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(20,20,18,0.45); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1.5rem; }
+.modal-box { background: #fff; border-radius: 14px; max-width: 480px; width: 100%; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+.modal-head { padding: 1.1rem 1.4rem; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; }
+.modal-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: #999; line-height: 1; padding: 4px; }
+.modal-close:hover { color: #333; }
+.modal-body { padding: 1rem 1.4rem 1.4rem; overflow-y: auto; }
+.vendor-search { width: 100%; box-sizing: border-box; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; margin-bottom: 0.8rem; font-family: inherit; }
+.vendor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+.vendor-grid-item { font-size: 13px; color: #333; padding: 5px 0; border-bottom: 1px solid #f2f2f0; display: flex; align-items: center; gap: 6px; overflow: hidden; }
+.vendor-grid-item i { color: #16a34a; font-size: 13px; flex-shrink: 0; }
+.vendor-count { font-size: 11px; color: #999; margin-bottom: 0.6rem; }
+.summary-card { background: #fff; border-radius: 10px; border: 1px solid #e8e8e4; padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.si { display: flex; flex-direction: column; gap: 2px; }
+.si-label { font-size: 11px; color: #999; }
+.si-value { font-size: 20px; font-weight: 500; }
+.vdiv { width: 1px; height: 36px; background: #e8e8e4; flex-shrink: 0; }
+.table-wrap { overflow: auto; border-radius: 10px; border: 1px solid #e8e8e4; background: #fff; max-height: 55vh; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { background: #f3f3f0; color: #555; font-weight: 500; font-size: 10px; padding: 8px 8px; text-align: left; border-bottom: 1px solid #e8e8e4; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+th.req::after { content: ' *'; color: #e53e3e; }
+td { padding: 0; border-bottom: 1px solid #f0f0ec; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #fafaf8; }
+.ci { width: 100%; padding: 7px 8px; border: none; background: transparent; color: #1a1a18; font-size: 12px; font-family: inherit; outline: none; }
+.ci:focus { background: #eff6ff; }
+.ci-r { text-align: right; }
+.cs { width: 100%; padding: 7px 6px; border: none; background: transparent; color: #1a1a18; font-size: 11px; font-family: inherit; outline: none; cursor: pointer; }
+.cs:focus { background: #eff6ff; }
+.del-btn { background: none; border: none; cursor: pointer; color: #ccc; font-size: 14px; padding: 8px; display: flex; align-items: center; }
+.del-btn:hover { color: #dc2626; }
+.add-row-btn { margin-top: 0.75rem; width: 100%; padding: 9px; border-radius: 8px; border: 1.5px dashed #ccc; background: none; color: #999; font-size: 13px; cursor: pointer; font-family: inherit; }
+.add-row-btn:hover { background: #f5f5f3; color: #333; }
+.ai-note { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #1d4ed8; display: flex; gap: 8px; margin-bottom: 1.25rem; }
+.info-box { background: #f8f8f6; border-radius: 8px; border: 1px solid #e8e8e4; padding: 12px 16px; font-size: 12px; color: #555; margin-top: 1.25rem; line-height: 1.8; }
+.info-box code { background: #e8e8e4; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+.sec-label { font-size: 11px; font-weight: 500; color: #999; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem; }
+.action-row { display: flex; gap: 8px; margin-top: 1.5rem; flex-wrap: wrap; }
+.success-box { text-align: center; padding: 3.5rem 2rem; background: #fff; border-radius: 12px; border: 1px solid #e8e8e4; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>業者見積取り込みツール</h1>
+  <p class="subtitle">業者を自動判定 → 列マッピング適用 → ANDPADインポートCSV出力</p>
+
+  <div class="steps-row">
+    <div class="step-item"><div class="step-dot active" id="dot1">1</div><div class="step-label">ファイル選択</div></div>
+    <div class="step-line"></div>
+    <div class="step-item"><div class="step-dot" id="dot2">2</div><div class="step-label">シート選択</div></div>
+    <div class="step-line"></div>
+    <div class="step-item"><div class="step-dot" id="dot3">3</div><div class="step-label">変換</div></div>
+    <div class="step-line"></div>
+    <div class="step-item"><div class="step-dot" id="dot4">4</div><div class="step-label">確認・編集</div></div>
+    <div class="step-line"></div>
+    <div class="step-item"><div class="step-dot" id="dot5">5</div><div class="step-label">CSV出力</div></div>
+  </div>
+
+  <div class="step active" id="step1">
+    <div class="info-box" style="margin-bottom:1rem;">
+      <strong><i class="ti ti-file-type-pdf"></i> PDFを直接変換できる業者：</strong>
+      砂山電気／グラフテクト（GRAFTEKT）／東京暖炉／長岡タイル工業<br>
+      <span style="color:#999;">上記4社のPDFはこのツールにそのままアップロードできます。</span><br>
+      <strong>それ以外の画像PDF業者（ジオック技研／ＮＣＮ概算見積／岩瀬産業の建具明細など）</strong>は、
+      文字が埋め込まれていないスキャンPDFのため、先にclaude.aiの「画像PDF見積変換」プロジェクトで
+      Excelに変換してから、このツールにアップロードしてください。
+    </div>
+    <div class="upload-zone" id="uploadZone">
+      <div style="font-size:48px; color:#d0d0cc; margin-bottom:1.25rem;"><i class="ti ti-file-spreadsheet"></i></div>
+      <div style="font-size:17px; font-weight:600; margin-bottom:0.5rem; color:#222;">業者見積エクセル・PDFをドロップ</div>
+      <div style="font-size:13px; color:#aaa; margin-bottom:1.5rem;">または下のボタンでファイルを選択</div>
+      <button class="btn" id="selectBtn"><i class="ti ti-upload"></i> ファイルを選択</button>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.csv,.pdf" />
+    </div>
+    <p style="font-size:12px; color:#ccc; text-align:center; margin-top:1rem;">.xlsx / .xls / .xlsm / .csv / .pdf 対応 &nbsp;|&nbsp; <button id="vendorListBtn" type="button" style="background:none;border:none;padding:0;font:inherit;color:#2563eb;cursor:pointer;text-decoration:underline;">対応業者一覧を見る</button></p>
+  </div>
+
+  <div class="modal-overlay" id="vendorListModal" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2><i class="ti ti-list-check"></i> 対応業者一覧</h2>
+        <button class="modal-close" id="vendorListCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="vendorSearchInput" class="vendor-search" placeholder="業者名で検索...">
+        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#555; margin-bottom:0.6rem; cursor:pointer;">
+          <input type="checkbox" id="vendorVerifiedToggle"> 変換確認済みの業者のみ表示
+        </label>
+        <div class="vendor-count" id="vendorCountLabel"></div>
+        <div class="vendor-grid" id="vendorGridEl"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" id="step2">
+    <div id="detectedBox" class="detected-box" style="display:none;">
+      <i class="ti ti-check" style="flex-shrink:0; font-size:18px;"></i>
+      <span id="detectedMsg"></span>
+    </div>
+    <div class="card">
+      <div style="font-size:15px; font-weight:600; margin-bottom:0.3rem;">取り込むシートを選択</div>
+      <div style="font-size:12px; color:#888; margin-bottom:0;">登録済み業者は推奨シートが自動選択されています</div>
+      <div class="sheet-list" id="sheetListEl"></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn" id="backBtn1">← 最初から</button>
+        <button class="btn btn-primary" id="analyzeBtn"><i class="ti ti-sparkles"></i> 変換開始</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" id="step3">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <div style="font-size:15px; font-weight:500; margin-bottom:0.4rem;" id="loadingMsg">変換中...</div>
+      <div style="font-size:13px; color:#999;" id="loadingSub">見積項目を抽出しています</div>
+    </div>
+  </div>
+
+  <div class="step" id="step4">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:1rem; flex-wrap:wrap;">
+      <div style="display:inline-flex; align-items:center; gap:6px; background:#fff; border:1px solid #e0e0dc; border-radius:8px; padding:6px 12px; font-size:13px; color:#666;">
+        <i class="ti ti-file-check"></i> <span id="fileNameLabel"></span>
+      </div>
+      <span id="sheetListLabel" style="font-size:12px; color:#999;"></span>
+    </div>
+    <div class="ai-note">
+      <i class="ti ti-sparkles" style="flex-shrink:0; margin-top:1px;"></i>
+      <span id="aiNote"></span>
+    </div>
+    <div class="summary-card">
+      <div class="si"><div class="si-label">検出方法</div><div class="si-value" id="methodLabel" style="font-size:14px; margin-top:3px;">—</div></div>
+      <div class="vdiv"></div>
+      <div class="si"><div class="si-label">検出項目数</div><div class="si-value" id="rowCount">0</div></div>
+      <div class="vdiv"></div>
+      <div class="si"><div class="si-label">合計金額（原単価×数量）</div><div class="si-value" id="totalAmount">—</div></div>
+    </div>
+    <div class="sec-label">見積項目 — ANDPADインポート形式</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:70px">フォルダ1</th><th style="width:55px">F2</th><th style="width:55px">F3</th><th style="width:55px">F4</th>
+            <th class="req" style="width:150px">摘要</th><th style="width:65px">工事場所</th><th style="width:65px">工事種類</th>
+            <th style="width:100px">備考1<small style="font-weight:400;color:#bbb">（規格・寸法）</small></th>
+            <th style="width:65px">備考2</th><th style="width:60px">定価</th><th style="width:50px">卸掛率</th><th style="width:50px">割引率</th>
+            <th class="req" style="width:80px">原単価</th><th style="width:55px">粗利率%</th>
+            <th class="req" style="width:80px">見積単価</th>
+            <th class="req" style="width:55px">数量</th><th class="req" style="width:48px">単位</th>
+            <th style="width:60px">取引先ID</th><th style="width:65px">取引先管理ID</th><th style="width:90px">取引先名</th>
+            <th style="width:65px">メモ</th><th style="width:90px">PDF表示設定</th><th style="width:65px">商品マスターID</th>
+            <th style="width:30px"></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <button class="add-row-btn" id="addRowBtn"><i class="ti ti-plus"></i> 行を追加</button>
+    <div class="action-row">
+      <button class="btn" id="backBtn2">← シート選択に戻る</button>
+      <button class="btn btn-primary" id="exportBtn"><i class="ti ti-download"></i> ANDPAD用CSVをダウンロード</button>
+    </div>
+    <div class="info-box">
+      <strong>ANDPADへの取り込み：</strong> 見積作成画面 → <strong>「インポート」</strong> → ダウンロードしたCSVを選択<br>
+      <code>原単価</code>と粗利率（デフォルト20%）から<code>見積単価</code>を自動計算。原単価・粗利率を変更すると即座に再計算されます。
+    </div>
+  </div>
+
+  <div class="step" id="step5">
+    <div class="success-box">
+      <div style="font-size:52px; color:#16a34a; margin-bottom:1rem;"><i class="ti ti-circle-check"></i></div>
+      <div style="font-size:18px; font-weight:500; margin-bottom:0.5rem;">CSVをダウンロードしました</div>
+      <div style="font-size:13px; color:#999; margin-bottom:0.3rem;">ANDPADの見積作成画面「インポート」からCSVを読み込んでください</div>
+      <div style="font-size:12px; color:#bbb; margin-bottom:1.75rem;">ファイルは「ダウンロード」フォルダに保存されています</div>
+      <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+        <button class="btn" id="backToEditBtn">← 編集に戻る</button>
+        <button class="btn" id="nextFileBtn"><i class="ti ti-plus"></i> 次のファイルを取り込む</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+</script>
+<script>
+// ═══════════════════════════════════════════════════
+// 業者マッピング定義
+// name: ファイル名に含まれるキーワード（配列、どれか一致でOK）
+// sheet: 使うシート名（配列、先頭優先）。nullは自動選択
+// headerKeyword: ヘッダー行を識別するキーワード
+// col_name: 品名列インデックス（-1=スキップ）
+// col_spec: 規格・寸法列（備考1に入れる）
+// col_qty: 数量列
+// col_unit: 単位列
+// col_uprice: 単価列（原単価として使用）
+// col_amount: 金額列（col_upriceがなければこちらを使用）
+// col_note: 備考列
+// col_cat: 工事区分（フォルダ1）列（-1=ヘッダー行から自動判定）
+// cat_label: 固定の工事区分名（col_catがない場合）
+// skip_if_no_qty_and_no_uprice: 数量も単価もない行をスキップ
+// two_row_name: 品番が次行に来るタイプ（岩瀬産業など）
+// ═══════════════════════════════════════════════════
+const VENDOR_MAPS = [
+  // ─── パターンA: 標準内訳書型 ───────────────────
+  {
+    name: ['LAMP'],
+    verified: true,
+    sheet: ['Sheet1'],
+    uncheck_sheets: ['Sheet2', 'Sheet3', 'Sheet4'],
+    headerKeyword: '名　　　　　　　称',
+    col_name: 0, col_spec: 3, col_qty: 5, col_unit: 6, col_uprice: 7, col_amount: 8, col_note: 9,
+    col_cat: -1, cat_label: '電気設備工事',
+    ditto: true
+  },
+  {
+    name: ['カナイヤ'],
+    verified: true,
+    sheet: ['Sheet2 (2)', 'Sheet2'],
+    headerKeyword: null,
+    skip_rows: 3,
+    col_name: 1, col_spec: 2, col_qty: 3, col_unit: 4, col_uprice: 5, col_amount: 6, col_note: -1,
+    col_note2: 7,
+    col_cat: -1, cat_label: '',
+    cat_bracket: true,
+    ditto: true
+  },
+  {
+    name: ['小林水道'],
+    verified: true,
+    sheet: ['設備工事'],
+    headerKeyword: '名称',
+    col_name: 1, col_spec: 2, col_qty: 3, col_unit: 4, col_uprice: 5, col_amount: 6, col_note: -1, col_note2: 7,
+    col_cat: -1, cat_label: '設備工事',
+    cat_keywords: ['給水設備工事', '屋内排水設備工事', '屋外排水設備工事', '衛生器具設備工事'],
+    cat_to_folder2: true,
+    // 数量・金額とも空欄で単価だけが入っている行（未発注の参考単価）は除外する
+    require_qty_or_amount: true
+  },
+  {
+    name: ['星野建具店', '星野建具'],
+    verified: true,
+    sheet: ['見積書 (１)', '見積書'],
+    headerKeyword: '品名',
+    col_name: 1, col_spec: -1, col_qty: 2, col_unit: 3, col_uprice: 4, col_amount: 5, col_note: 6,
+    col_cat: -1, cat_label: '建具工事',
+    heading_group_mode: true, note1_half_width: true
+  },
+  {
+    name: ['品田コンクリート', '品田'],
+    verified: true,
+    sheet: ['Sheet1'],
+    headerKeyword: '品　　名',
+    col_name: 0, col_spec: 10, col_qty: 5, col_unit: 6, col_uprice: 7, col_amount: 8, col_note: -1,
+    col_cat: -1, cat_label: '基礎工事',
+    ditto: true
+  },
+  {
+    name: ['不動工業', '不動'],
+    verified: true,
+    sheet: ['Sheet1'],
+    headerKeyword: '材         料         名',
+    col_name: 8, col_spec: 9, col_qty: 10, col_unit: 11, col_uprice: 12, col_amount: 13, col_note: -1,
+    col_cat: -1, cat_label: '設備工事',
+    skip_after_header: 16,
+    cat_solo_row: true
+  },
+  {
+    name: ['渡部水道', '渡部'],
+    verified: true,
+    // 「内訳」はカテゴリ単位の集計シートで「明細」の詳細内訳と重複するが、
+    // 「運搬及諸経費」だけは明細シートに対応する内訳が無いため、内訳シートからその1項目だけ拾う
+    sheet: ['明細', '内訳'],
+    uncheck_sheets: ['表紙'],
+    headerKeyword: '内　　　容',
+    col_name: 2, col_spec: 4, col_qty: 6, col_unit: 7, col_uprice: 8, col_amount: 9, col_note: 10,
+    col_cat: -1, cat_label: '給排水衛生設備工事',
+    // フォルダ2＝区分名（給水設備工事／給湯設備工事／排水設備工事／住宅機器設備／雨水処理工事／給水管本管取出工事）
+    cat_keywords: ['給水設備工事', '給湯設備工事', '排水設備工事', '住宅機器設備', '雨水処理工事', '給水管本管取出工事'],
+    cat_to_folder2: true,
+    // ＜引込み延長工事＞のように山括弧付きの名称自体が価格を持つ品目のため、山括弧見出し扱いにしない
+    keep_angle_bracket_items: true,
+    // 摘要中の山括弧（<引込み延長工事>等）を除去
+    strip_name_regex: /[<>]/g,
+    // 「【小計】」は各区分の集計行（合計・小計の既定パターンには一致しないため個別に除外）
+    skip_name_regex: /^【小計】$/,
+    // 単価・金額とも空欄で参考的に単価だけ入っている行（別途対応の設備等）を除外
+    require_qty_or_amount: true,
+    // 単価が空欄で金額のみの行は、その金額を数量で割って1つあたりの原単価に変換する
+    amount_fallback_is_total: true,
+    // 内訳シートが実ファイル上は明細シートより先にあるため、運搬及諸経費が中間に来てしまう対策
+    sort_last_if_folder2_equals: '運搬及諸経費',
+    sheet_overrides: {
+      '内訳': {
+        only_names: ['運搬及諸経費'],
+        fixed_folder2: '運搬及諸経費'
+      }
+    }
+  },
+  {
+    name: ['鈴木設備工業', '鈴木設備'],
+    verified: true,
+    sheet: ['内訳明細書 ', '内訳明細書  (2)', '内訳明細書', '見積書'],
+    headerKeyword: '品名',
+    col_name: 0, col_spec: 3, col_qty: 6, col_unit: 7, col_uprice: 8, col_amount: 10, col_note: 12,
+    col_cat: -1, cat_label: '設備工事',
+    cat_to_folder2: true, strip_num_prefix_cat: true, sort_last_if_folder2_equals: '諸経費',
+    // 見積書タブは集計ページのため、内訳明細書で既に取り込み済みの（1）（2）の行は除外し、
+    // 内訳明細書に対応シートがない「諸経費」「値引き」などの行だけを別列構成で取り込む
+    sheet_overrides: {
+      '見積書': {
+        headerKeyword: '工事項目',
+        col_name: 0, col_spec: -1, col_qty: 10, col_unit: 12, col_uprice: -1, col_amount: 15, col_note: -1,
+        skip_name_regex: /^（[12１２]）/,
+        fixed_folder2: '諸経費'
+      }
+    }
+  },
+  {
+    name: ['砂山電気', '砂山'],
+    verified: true,
+    pdf_supported: true,
+    sheet: ['ベース'],
+    headerKeyword: null,
+    col_name: 0, col_spec: -1, col_qty: 2, col_unit: 3, col_uprice: -1, col_amount: 5, col_note: -1,
+    col_cat: -1, cat_label: '電気設備工事',
+    // 「1.電気工事」はサマリー表の合計行で、下にある詳細内訳（引込幹線設備工事等）の
+    // 合計と完全に一致する（＝二重計上になる）ため、サマリー側の行は除外する
+    skip_name_regex: /^1\.電気工事$/,
+    // 詳細内訳側の項目名先頭に付く「  1. 1.」のような二重採番を取り除く
+    strip_name_regex: /^\s*[0-9]+\.\s*[0-9]+\.\s*/,
+    // このシートには「計／小計／合計」×4カテゴリ分の合計行に続けて、さらに1段階詳細な
+    // 部材・労務費レベルの内訳（合計と完全に重複＝三重計上になる）が続くため、
+    // 4回目の合計行（カテゴリ内訳の合計）が出た時点で以降の処理を打ち切る
+    stop_after_total_count: 3
+  },
+  {
+    name: ['四季'],
+    verified: true,
+    sheet: ['見積書'],
+    uncheck_sheets: ['見積り（業者用）貼付', '見積書【作成例】', 'リスト'],
+    headerKeyword: '見積内訳書',
+    col_name: 1, col_spec: 4, col_qty: 5, col_unit: 6, col_uprice: 7, col_amount: 8, col_note: 9,
+    col_cat: -1, cat_label: '外構工事',
+    cat_by_blank_price: true, cat_to_folder2: true
+  },
+  {
+    name: ['根岸'],
+    verified: true,
+    sheet: ['Sheet1'],
+    uncheck_sheets: ['Sheet2', 'Sheet3'],
+    headerKeyword: '材 料 寸 法',
+    col_name: 0, col_spec: 4, col_qty: 5, col_unit: 7, col_uprice: 8, col_amount: 9, col_note: -1,
+    col_cat: -1, cat_label: '外壁工事',
+    // テンプレートに残ったダミーの練習データ（例：24.X, 25.Y, 26.Z）を除外する
+    skip_name_regex: /^[0-9０-９]+[.．][A-Za-zＡ-Ｚａ-ｚ]$/,
+    // NET金額と見積金額（品目合計）の比率を各品目に掛けて原単価を再計算する
+    net_ratio_pricing: { netCellRegex: /NET[\s　]*[￥¥]?([0-9０-９,，]+)/ }
+  },
+
+  // ─── パターンB: 仕様・寸法複合型 ──────────────
+  {
+    name: ['インゼクト'],
+    verified: true,
+    sheet: ['見積①'],
+    headerKeyword: 'No',
+    col_name: 1, col_spec: 5, col_qty: 9, col_unit: 10, col_uprice: 11, col_amount: 13, col_note: 15,
+    col_cat: -1, cat_label: '足場工事',
+    // 「関 浩哉様邸 新築工事」のような様邸名の行が「〜工事」で終わるため、
+    // 汎用の工事区分見出し判定に誤って引っかかりフォルダ1が様邸名に置き換わってしまう不具合を防ぐ
+    disable_kouji_heading: true
+  },
+  {
+    name: ['エクステリアウインド', 'エクステリア'],
+    verified: true,
+    sheet: ['Sheet1'],
+    uncheck_sheets: ['Sheet2', 'Sheet3'],
+    headerKeyword: null,
+    col_name: 1, col_spec: 2, col_qty: 3, col_unit: 4, col_uprice: 5, col_amount: 6, col_note: -1,
+    col_cat: -1, cat_label: '外構工事',
+    // 「カーポート　カーポート下土間工事」等の区分見出し行が「〜工事」で終わるため、
+    // 汎用の工事区分見出し判定に誤って引っかかりフォルダ1が区分名に置き換わってしまう不具合を防ぐ
+    disable_kouji_heading: true,
+    // A列（No）に数字が入っている行を区分見出しとして、その行のB列の文字をフォルダ2にする
+    col_group_marker: 0, col_group_label: 1,
+    // このシートには「サマリー表（区分ごとの項目、案件により件数が変動する）」の下に
+    // 「内訳明細（同じ区分の詳細breakdown）」が続く。内訳明細側の見出し行はスペースの数が
+    // わずかに異なり既定のヘッダー判定に引っかからず、両方が二重に取り込まれてしまうため、
+    // 「内訳明細」という文言が出る行を見つけてから3行（区切り線・No表示・見出し行）を
+    // 読み飛ばし、実際の明細行だけを対象とする（サマリー項目数が案件ごとに変わっても対応できる）
+    skip_until_keyword: '内\u3000訳\u3000明\u3000細',
+    skip_after_keyword_rows: 2
+  },
+  {
+    name: ['キャピタルウッズ仮設', 'キャピタルウッズ足場'],
+    verified: true,
+    sheet: ['御見積書'],
+    headerKeyword: 'Ｎｏ',
+    col_name: 1, col_spec: 10, col_qty: 21, col_unit: 22, col_uprice: 23, col_amount: 26, col_note: 28,
+    col_cat: -1, cat_label: '仮設工事',
+    cat_switch: [{ at: '本体足場架払工事', label: '外部足場工事' }],
+    // 数量が空欄（単価のみ参考掲載）の行に「1」を自動補完しない
+    no_qty_fallback: true
+  },
+  {
+    name: ['キャピタルウッズ吹付', 'キャピタルウッズウレタン'],
+    verified: true,
+    sheet: ['見積　発注書'],
+    headerKeyword: '品　　名',
+    col_name: 0, col_spec: -1, col_spec2: [4,5], col_qty: 6, col_unit: 7, col_uprice: 8, col_amount: 9, col_note: -1,
+    col_cat: -1, cat_label: '断熱工事',
+    stop_keyword: '合計',
+    add_discount_row: true,
+    skip_empty_qty: true
+  },
+  {
+    name: ['高崎トーヨー', 'トーヨー'],
+    verified: true,
+    sheet: ['見積内訳書'],
+    uncheck_sheets: ['見積書鑑'],
+    headerKeyword: '符　号',
+    col_name: 1, col_spec: -1, col_qty: 7, col_unit: -1, col_uprice: 9, col_amount: 10, col_note: -1,
+    col_spec2: [5, 6], // W+H結合
+    col_list_price: 11, // 上代→定価
+    col_cat: -1, cat_label: '金属建具工事',
+    two_row_name: true, cat_bracket: true, cat_bracket_prefix: true,
+    cat_to_folder2: true,
+    cat_label_map: { AD: 'ドア', AW: 'サッシ' }
+  },
+  {
+    name: ['トレド'],
+    verified: true,
+    sheet: ['見積書 (2)', '見積書'],
+    headerKeyword: null,
+    col_name: 3, col_spec: -1, col_qty: 7, col_unit: -1, col_uprice: 8, col_amount: 9, col_note: -1,
+    col_cat: -1, cat_label: 'カーテン工事',
+    // 摘要＝部屋名＋位置（どちらも最初の行にしか入っていないため直前の値を引き継ぐ）
+    name_carry_cols: [1, 2], name_carry_sep: '　',
+    // 備考1＝品名＋型番等（2列を連結）
+    note1_cols: [3, 4], note1_cols_sep: '　',
+    // 備考2＝製作寸法（W×H）＋備考欄
+    col_spec2: [5, 6],
+    note2_extra_col: 10, note2_include_spec: true
+  },
+  {
+    name: ['群馬圏央足場', '群馬圏央'],
+    verified: true,
+    sheet: ['M260226', 'M251223A'],
+    sheet_name_regex: /^M\d/,
+    headerKeyword: '摘',
+    col_name: 0, col_spec: -1, col_qty: 14, col_unit: 17, col_uprice: 18, col_amount: 21, col_note: -1,
+    col_cat: -1, cat_label: '足場工事'
+  },
+
+  // ─── パターンC: 住設機器型 ──────────────────────
+  {
+    name: ['岩瀬産業太陽光'],
+    verified: true,
+    sheet: ['見積書'],
+    headerKeyword: '品名・寸法',
+    col_name: 0, col_spec: -1, col_qty: 5, col_unit: 6, col_uprice: 7, col_amount: 8, col_note: 10,
+    col_cat: -1, cat_label: '太陽光発電システム工事',
+    two_row_name: true, cat_bracket: true, single_folder: true
+  },
+  {
+    name: ['岩瀬産業'],
+    verified: true,
+    sheet: ['見積書'],
+    headerKeyword: '品名・寸法',
+    col_name: 0, col_spec: -1, col_qty: 5, col_unit: 6, col_uprice: 7, col_amount: 8, col_note: 10,
+    col_list_price: 11,
+    col_cat: -1, cat_label: '住設機器',
+    two_row_name: true, cat_bracket: true
+  },
+  {
+    name: ['ＮＣＮ', 'NCN'],
+    verified: true,
+    sheet: ['Page004', 'Page005', 'Page006', '合計金額', '内訳明細書'],
+    headerKeyword: null,
+    col_name: -1, col_spec: -1, col_qty: -1, col_unit: -1, col_uprice: -1, col_amount: -1, col_note: -1,
+    col_cat: -1, cat_label: '構造材',
+    ncn_mode: true
+  },
+
+  // ─── パターンD: 木材・プレカット型 ──────────────
+  {
+    name: ['小林産業'],
+    verified: true,
+    sheet: ['横架材', '柱材', '羽柄合板加工有', '羽柄合板加工なし ', '積算'],
+    // 特殊加工代・特殊加工明細・金物積算書は列構成が異なり未対応のため、既定ではチェックを外しておく
+    // （羽柄合板加工有もこの案件では未使用のため既定ではチェックを外す）
+    uncheck_sheets: ['羽柄合板加工有', '特殊加工代', '特殊加工明細', '金物積算書', '金物積算書 (印刷用)'],
+    headerKeyword: '区分',
+    col_name: 2, col_spec: -1, col_qty: 7, col_unit: 9, col_uprice: 8, col_amount: 11, col_note: -1,
+    col_spec2: [4, 5, 6], // W+H+L
+    col_cat: -1, cat_label: '構造材',
+    name_prefix_col: 0, name_prefix_sep: '　',
+    // 積算シートは実ファイル上では先頭に位置するため、並び順を明示的に構造材→プレカット加工費に固定する
+    folder1_sort_order: ['構造材', 'プレカット加工費'],
+    // 積算シート内の「羽柄加工代金」表（メインの加工代金表とは別の列位置）も追加でスキャンする
+    extra_scans: [
+      { sheet: '積算', headerKeyword: '羽柄加工代金', col_name: 1, col_qty: 2, col_unit: 3, col_uprice: 4, col_amount: 6, cat_label: 'プレカット加工費', strip_parens: true }
+    ],
+    // 単価列はｍ3単価のため、金額（単価×ｍ3）を本数で割った「1本あたりの原単価」に変換する
+    unit_cost_from_amount: true,
+    // 積算シートは構造材本体とは別レイアウト（加工代金の内訳表）のため、専用の列構成で取り込む
+    // 羽柄合板の2シートは種別列の後に空列が1つ多く挟まるため、小計列が1つ後ろにずれる（11→12）
+    sheet_overrides: {
+      '羽柄合板加工有': { col_amount: 12 },
+      '羽柄合板加工なし ': { col_amount: 12 },
+      '積算': {
+        headerKeyword: '構造材加工代金',
+        col_name: 9, col_spec: -1, col_spec2: null, col_qty: 10, col_unit: 11, col_uprice: 12, col_amount: 13, col_note: -1,
+        col_cat: -1, cat_label: 'プレカット加工費', cat_to_folder2: false, name_prefix_col: -1, strip_parens: true,
+        require_qty: true, unit_cost_from_amount: false
+      }
+    }
+  },
+
+  // ─── パターンE: 特殊 ─────────────────────────────
+  {
+    name: ['カメイ'],
+    verified: true,
+    sheet: ['見積書'],
+    headerKeyword: '品　　　名',
+    col_name: 0, col_spec: 9, col_qty: 18, col_unit: 20, col_uprice: 22, col_amount: 25, col_note: -1,
+    col_list_price: 30,
+    col_cat: -1, cat_label: 'カメイ'
+  },
+  {
+    name: ['山川電匠'],
+    verified: true,
+    sheet: ['明細1', '明細2', '明細3', '明細4', '明細5', '明細6', '見積書\u3000表紙'],
+    headerKeyword: '品名',
+    col_name: 1, col_spec: -1, col_qty: 2, col_unit: 3, col_uprice: 4, col_amount: 5, col_note: 6,
+    col_cat: -1, cat_label: '電気工事',
+    catalog_seq: true, col_seq: 0, cat_to_folder2: true, sort_last_if_folder2_equals: '諸経費',
+    skip_name_regex: /山\s*川\s*電\s*匠/,
+    sheet_overrides: {
+      '明細1': { cat_label: '幹線・分電盤・仮設電灯工事' },
+      '明細2': { cat_label: '電灯コンセント工事' },
+      '明細3': { cat_label: '弱電設備工事' },
+      '明細4': { cat_label: '換気設備工事' },
+      '明細5': { cat_label: 'エアコン工事' },
+      '明細6': { cat_label: 'エアコン工事' },
+      // 表紙シートは各明細の集計ページのため、明細シートで既に取り込み済みの5カテゴリは除外し、
+      // 明細に対応シートがない「消耗品雑材料費」「諸経費」「調整値引き」だけを別列構成で取り込む
+      '見積書\u3000表紙': {
+        headerKeyword: '品\u3000名',
+        col_name: 1, col_spec: -1, col_qty: 6, col_unit: 7, col_uprice: 8, col_amount: 10, col_note: -1,
+        skip_name_regex: /^(幹線・分電盤・仮設電灯工事|電灯コンセント工事|弱電設備工事|換気設備工事|エアコン工事|〃)/,
+        cat_label: '諸経費'
+      }
+    }
+  },
+  {
+    name: ['パナソニック'],
+    verified: true,
+    sheet: ['plan'],
+    headerKeyword: null,
+    col_name: 6, col_spec: 5, col_qty: 7, col_unit: -1, col_uprice: 12, col_amount: -1, col_note: -1,
+    col_cat: -1, cat_label: '木製建具工事',
+    row_type_hierarchy: true, col_row_type: 0, col_cat_name: 3
+  },
+  {
+    name: ['パナソニック照明', 'あかりプラン'],
+    verified: true,
+    sheet: ['税抜'],
+    sheet_name_regex: /^税抜/,
+    uncheck_sheets_regex: /^税込/,
+    headerKeyword: 'ﾌﾛｱ',
+    col_name: 2, col_spec: 3, col_qty: 5, col_unit: -1, col_uprice: 6, col_amount: 7, col_note: 10, col_note2: 4,
+    col_cat: -1, cat_label: '照明器具工事',
+    cost_price_pct_by_prefix: {
+      sourceCol: 3,
+      rules: { SL: 0.45, EE: 0.60, DH: 0.65, WT: 0.60, WF: 0.40 },
+      defaultPct: 0.36
+    }
+  },
+  {
+    name: ['GFT-', 'グラフテクト', 'GRAFTEKT'],
+    verified: true,
+    pdf_supported: true,
+    sheet: ['御見積書'],
+    headerKeyword: '希望小売価格',
+    col_name: 0, col_spec: -1, col_qty: -1, col_unit: -1, col_uprice: 3, col_amount: -1, col_note: -1,
+    col_list_price: 2,
+    col_cat: -1, cat_label: 'キッチン',
+    // GRAFTEKT（TJMデザイン）はPDFのみで届くため、Claudeに変換依頼した際に
+    // 再構成される標準フォーマット（シート名「御見積書」、A列=項目/C列=希望小売価格/D列=納入価格）を前提とする
+    skip_name_regex: /^(商品代|（内|法定福利費|種類|雇用保険|健康保険|介護保険|厚生年金保険|子ども[・･]子育て拠出金)/
+  },
+  {
+    name: ['東京暖炉'],
+    verified: true,
+    pdf_supported: true,
+    sheet: ['見積書'],
+    headerKeyword: '割引後金額',
+    // 東京暖炉もPDFのみで届くため、Claudeに変換依頼した際に再構成される標準フォーマットを前提とする
+    // （シート名「見積書」、A列=名称/B列=内容/C列=数量/D列=単位/E列=単価/F列=金額/G列=割引後金額/H列=割引後単価）
+    // 原単価はH列（割引後金額÷数量）を使用する。工事費・諸経費は数量1のためG列と同額。
+    col_name: 0, col_spec: 1, col_qty: 2, col_unit: 3, col_uprice: 7, col_amount: 5, col_note: -1,
+    col_list_price: 4,
+    col_cat: -1, cat_label: '薪ストーブ工事',
+    skip_name_regex: /^(部材代合計|小計|特別値引き|値引き後合計|消費税|御見積り金額)/
+  },
+  {
+    // 関工務所自社の木材積算テンプレート（拾い根拠）。造作材・ｻｯｼ枠・羽柄材タブの
+    // うち数量が入っている行だけを取り込む。専用の hiroiParse で処理する
+    name: ['拾い根拠', '木材明細書'],
+    verified: true,
+    sheet: ['造作材', '建具枠', 'ｻｯｼ枠', '羽柄材'],
+    uncheck_sheets: ['拾い根拠', '内装仕上げ表', '単価表'],
+    hiroi_mode: true
+  },
+  {
+    // ジオック技研はPDFが画像スキャンのため文字を含まず、PDF直接取込は対応不可。
+    // Claudeに変換依頼した際に再構成される標準フォーマットを前提とする
+    // （シート名「御見積書」、A列=フォルダ1/B列=摘要/C列=備考1/D列=数量/E列=単位/F列=原単価/G列=指定粗利率）
+    // CSV取込の場合はシート名が自動的に「Sheet1」になるため、こちらも許容する
+    name: ['ジオック技研', 'ジオック'],
+    verified: true,
+    sheet: ['御見積書', 'Sheet1'],
+    headerKeyword: '指定粗利率',
+    col_name: 1, col_spec: 2, col_qty: 3, col_unit: 4, col_uprice: 5, col_amount: -1, col_note: -1,
+    col_cat: -1, cat_label: '地盤改良工事'
+  },
+  {
+    // ＮＣＮの構造計算前の概算見積（構造材・ソフト料・アンカーベースの3枚組）もPDFが画像スキャンのため
+    // PDF直接取込は対応不可。Claudeに変換依頼した際に再構成される標準フォーマットを前提とする
+    // （シート名「見積書」、A列=フォルダ1(構造材/ソフト料/アンカーベース等)/B列=摘要/C列=備考1/
+    // D列=数量/E列=単位/F列=原単価/G列=指定粗利率）。ジオック技研と異なりフォルダ1は固定せず
+    // A列の値をそのまま使う。
+    name: ['ＮＣＮ概算', 'NCN概算'],
+    verified: true,
+    sheet: ['見積書', 'Sheet1'],
+    headerKeyword: '指定粗利率',
+    col_name: 1, col_spec: 2, col_qty: 3, col_unit: 4, col_uprice: 5, col_amount: -1, col_note: -1,
+    col_cat: 0
+  },
+  {
+    // 長岡タイル工業はPDFに文字が埋め込まれているためPDF直接取込に対応。
+    // 1ページ＝1工事区分（ガレージ車庫床タイル工事、外壁タイル工事等）の構成で、
+    // フォルダ1「タイル工事」固定、フォルダ2に工事区分名を入れる
+    name: ['長岡タイル', '長岡タイル工業'],
+    verified: true,
+    pdf_supported: true,
+    sheet: ['御見積書', 'Sheet1'],
+    headerKeyword: '摘要'
+  },
+];
+
+const ANDPAD_COLS = ['folder1','folder2','folder3','folder4','name','place','type','note1','note2','list_price','wholesale_rate','discount_rate','cost_price','gross_rate','unit_price','qty','unit','supplier_id','supplier_mgr_id','supplier_name','memo','pdf_display','master_id'];
+const ANDPAD_HEADERS = ['フォルダ１','フォルダ２','フォルダ３','フォルダ４','摘要','工事場所','工事種類','備考1','備考2','定価','卸掛率','割引率','原単価','指定粗利率','見積単価','数量','単位','取引先ID','取引先管理ID','取引先名','メモ','PDF表示設定','商品マスター管理ID'];
+const PDF_OPTS = ['表示する','金額反映なし','PDF非表示','原価のみ反映'];
+const DEFAULT_GROSS = '20';
+
+let rows = [], currentFileName = '', allSheets = [], selSheets = new Set();
+let detectedVendor = null;
+
+// ─── イベント登録 ─────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const uploadZone = document.getElementById('uploadZone');
+  const fileInput  = document.getElementById('fileInput');
+  uploadZone.addEventListener('dragenter', e => { e.preventDefault(); e.stopPropagation(); uploadZone.classList.add('drag-over'); });
+  uploadZone.addEventListener('dragover',  e => { e.preventDefault(); e.stopPropagation(); uploadZone.classList.add('drag-over'); });
+  uploadZone.addEventListener('dragleave', e => { e.preventDefault(); e.stopPropagation(); uploadZone.classList.remove('drag-over'); });
+  uploadZone.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); uploadZone.classList.remove('drag-over'); const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
+  document.getElementById('selectBtn').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
+  document.getElementById('backBtn1').addEventListener('click', () => resetAll());
+  document.getElementById('analyzeBtn').addEventListener('click', () => startConvert());
+  document.getElementById('addRowBtn').addEventListener('click', () => addRow());
+  document.getElementById('backBtn2').addEventListener('click', () => showStep(2));
+  document.getElementById('exportBtn').addEventListener('click', () => exportCSV());
+  document.getElementById('backToEditBtn').addEventListener('click', () => showStep(4));
+  document.getElementById('nextFileBtn').addEventListener('click', () => resetAll());
+
+  // 対応業者一覧モーダル
+  const vendorListBtn = document.getElementById('vendorListBtn');
+  const vendorListModal = document.getElementById('vendorListModal');
+  const vendorListCloseBtn = document.getElementById('vendorListCloseBtn');
+  const vendorGridEl = document.getElementById('vendorGridEl');
+  const vendorCountLabel = document.getElementById('vendorCountLabel');
+  const vendorSearchInput = document.getElementById('vendorSearchInput');
+
+  // VENDOR_MAPSから業者名一覧を生成（各業者のname配列の最初を正式名称、残りをエイリアスとして表示）
+  const vendorListData = VENDOR_MAPS.map(vm => ({
+    primary: vm.name[0],
+    aliases: vm.name.slice(1),
+    verified: !!vm.verified,
+    pdfSupported: !!vm.pdf_supported
+  }));
+  let vendorShowVerifiedOnly = false;
+
+  function renderVendorList(filter) {
+    const q = (filter || '').trim().toLowerCase();
+    let filtered = vendorListData.filter(v => {
+      if(!q) return true;
+      return v.primary.toLowerCase().includes(q) || v.aliases.some(a => a.toLowerCase().includes(q));
+    });
+    if(vendorShowVerifiedOnly) filtered = filtered.filter(v => v.verified);
+    const verifiedTotal = vendorListData.filter(v => v.verified).length;
+    vendorCountLabel.textContent = vendorShowVerifiedOnly
+      ? `変換確認済み ${verifiedTotal}社中 ${filtered.length}社を表示`
+      : `対応業者 ${vendorListData.length}社中 ${filtered.length}社を表示（うち変換確認済み ${verifiedTotal}社）`;
+    vendorGridEl.innerHTML = filtered.map(v => `
+      <div class="vendor-grid-item">
+        <i class="ti ${v.verified ? 'ti-circle-check' : 'ti-circle-dashed'}" style="${v.verified ? '' : 'color:#ccc;'}"></i>${v.primary}${v.aliases.length ? `<span style="color:#bbb;font-size:11px;">（${v.aliases.join('、')}）</span>` : ''}
+        <span style="margin-left:auto;font-size:10px;${v.pdfSupported ? 'color:#b45309;background:#fffbeb;' : 'color:#2563eb;background:#eff6ff;'}padding:1px 6px;border-radius:8px;">${v.pdfSupported ? 'PDF対応' : 'Excel/CSV'}</span>${v.verified ? '<span style="font-size:10px;color:#16a34a;background:#f0fdf4;padding:1px 6px;border-radius:8px;">確認済み</span>' : ''}
+      </div>
+    `).join('') || '<div style="color:#999; font-size:13px; padding:0.5rem 0;">該当する業者が見つかりません</div>';
+  }
+
+  function openVendorListModal() {
+    vendorSearchInput.value = '';
+    renderVendorList('');
+    vendorListModal.style.display = 'flex';
+    vendorSearchInput.focus();
+  }
+  function closeVendorListModal() { vendorListModal.style.display = 'none'; }
+
+  vendorListBtn.addEventListener('click', openVendorListModal);
+  vendorListCloseBtn.addEventListener('click', closeVendorListModal);
+  vendorListModal.addEventListener('click', e => { if(e.target === vendorListModal) closeVendorListModal(); });
+  vendorSearchInput.addEventListener('input', e => renderVendorList(e.target.value));
+  document.getElementById('vendorVerifiedToggle').addEventListener('change', e => {
+    vendorShowVerifiedOnly = e.target.checked;
+    renderVendorList(vendorSearchInput.value);
+  });
+});
+
+function showStep(n) {
+  for(let i=1; i<=5; i++) {
+    document.getElementById('step'+i).classList.toggle('active', i===n);
+    const d = document.getElementById('dot'+i);
+    d.classList.remove('active','done');
+    if(i<n) d.classList.add('done'); else if(i===n) d.classList.add('active');
+  }
+}
+
+// ─── 業者判定（ファイル名 + コンテンツ両対応） ────
+// 各業者の識別に使う固有文字列
+const VENDOR_SIGNATURES = [
+  { name: 'LAMP',              sig: ['内　　　訳　　　明　　　細　　　書', '名　　　　　　　称'] },
+  { name: 'カナイヤ',          sig: ['内　　訳　　書', '【　屋根工事　】'] },
+  { name: 'インゼクト',        sig: ['株式会社インゼクト', '規　格　・　適　用'] },
+  { name: 'エクステリアウインド', sig: ['エクステリア'] },
+  { name: 'キャピタルウッズ仮設資材_足場工事', sig: ['キャピタルウッズ', 'Ｔｅｌ　027-329-6070'] },
+  { name: 'キャピタルウッズ吹付ウレタン',      sig: ['キャピタルウッズ', '吹付硬質ウレタンフォーム'] },
+  { name: 'トレド',            sig: ['カーテン トレド', 'TEL　027-350-1688'] },
+  { name: '小林水道',          sig: ['内　訳　明　細　書', '給水設備工事', '№|名称|形状寸法'] },
+  { name: '星野建具店',        sig: ['星野建具店', '沼田市上原町1726'] },
+  { name: '岩瀬産業太陽光',    sig: ['岩瀬産業', '太陽光'] },
+  { name: '岩瀬産業',          sig: ['岩瀬産業株式会社', '前橋管材'] },
+  { name: '群馬圏央足場',      sig: ['群馬圏央足場'] },
+  { name: '高崎トーヨー',      sig: ['御 見 積 内 訳 書', '符　号　・　名　称'] },
+  { name: '根岸',              sig: ['根岸 ファサード', '株式会社 根岸'] },
+  { name: '砂山電気',          sig: ['砂山電気'] },
+  { name: '四季',              sig: ['株式会社　四 季', '四　季'] },
+  { name: '小林産業',          sig: ['＜＜　横架材　＞＞', '積算書'] },
+  { name: 'ＮＣＮ',           sig: ['ＳＥ構法', 'Page004', '構造材 構造計算後'] },
+  { name: 'ＮＣＮ',           sig: ['積込養生費', '運搬費(構造材)', '内訳明細書'] },
+  { name: '渡部水道',          sig: ['明　　細　　書', '行区分|GLP', 'GLP'] },
+  { name: '品田コンクリート',  sig: ['有限会社　品田コンクリート', '概算見積書'] },
+  { name: '不動工業',          sig: ['不 動 工 業'] },
+  { name: '鈴木設備工業',      sig: ['鈴木設備工業', '【内訳明細書】'] },
+  { name: '小林水道',          sig: ['小林水道'] },
+  { name: '星野建具店',        sig: ['星野建具店'] },
+  { name: '渡部水道',          sig: ['渡部水道'] },
+  { name: '山川電匠',          sig: ['山　川　電　匠'] },
+  { name: 'パナソニック',      sig: ['ＶＥＲＩＴＩＳ'] },
+  { name: 'パナソニック照明',  sig: ['ｶﾀﾛｸﾞNo-掲載頁'] },
+  { name: '東京暖炉',          sig: ['東京暖炉株式会社', '上栗須'] },
+  { name: 'グラフテクト',      sig: ['GRAFTEKT', '株式会社TJMデザイン'] },
+  { name: '拾い根拠',          sig: ['木\u3000材\u3000明\u3000細\u3000書', '拾い根拠'] },
+  { name: 'ジオック技研',      sig: ['ジオック技研'] },
+  { name: 'ＮＣＮ概算',        sig: ['エヌ・シー・エヌ', '指定粗利率'] },
+  { name: '長岡タイル',        sig: ['長岡タイル工業'] },
+];
+
+function detectVendor(fname, allSheets) {
+  // まずファイル名で判定（複数の業者名がマッチしうる場合は、最も長く具体的な名前を優先する）
+  const base = fname.replace(/\.[^.]+$/, '');
+  let bestVm = null, bestLen = 0;
+  for(const v of VENDOR_MAPS) {
+    for(const n of v.name) {
+      if((base.includes(n) || fname.includes(n)) && n.length > bestLen) { bestVm = v; bestLen = n.length; }
+    }
+  }
+  if(bestVm) return bestVm;
+
+  // ファイル名でわからなければコンテンツで判定
+  // 全シートのテキストを結合
+  const fullText = allSheets.map(s =>
+    [s.name, ...s.raw.map(r => r.map(c=>String(c||'')).join('|'))].join(' ')
+  ).join(' ');
+
+  // シグネチャマッチング（複数条件AND）
+  for(const sig of VENDOR_SIGNATURES) {
+    const matched = sig.sig.every(keyword => fullText.includes(keyword));
+    if(matched) {
+      // シグネチャ名からVENDOR_MAPSを検索（完全一致を優先し、見つからない場合のみ部分一致にフォールバック）
+      let vm = VENDOR_MAPS.find(v => v.name.includes(sig.name));
+      if(!vm) vm = VENDOR_MAPS.find(v => sig.name.includes(v.name[0]));
+      if(vm) return vm;
+    }
+  }
+
+  return null;
+}
+
+// ─── ファイル読み込み ──────────────────────────────
+function loadFile(file) {
+  currentFileName = file.name;
+  document.getElementById('fileNameLabel').textContent = file.name;
+
+  if(/\.pdf$/i.test(file.name)) {
+    handlePdfFile(file);
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onerror = () => alert('ファイルの読み込みに失敗しました。');
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellFormula: false, cellHTML: false });
+      allSheets = wb.SheetNames.map(name => {
+        const ws = wb.Sheets[name];
+        // 一部の業者ファイル（.xlsx/.xlsm）はシートの使用範囲がA列から始まらない（例: B列開始）ため、
+        // sheet_to_jsonが実データの先頭列を0番目にしてしまい、col_name等の列インデックス指定が
+        // ずれて読み込めなくなることがある。それを防ぐため、常にA列（列0）始まりの範囲を強制する。
+        // ただし.xls（旧形式）はsheet_to_json側で既に自動的にA列基準になっているため、
+        // ここで強制すると逆に二重に列がずれてしまう。.xlsx/.xlsmのみに限定して適用する。
+        if(/\.xlsx$|\.xlsm$/i.test(file.name) && ws['!ref']) {
+          const range = XLSX.utils.decode_range(ws['!ref']);
+          if(range.s.c > 0) {
+            range.s.c = 0;
+            ws['!ref'] = XLSX.utils.encode_range(range);
+          }
+        }
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        const filled = raw.filter(r => r.some(c => String(c).trim()));
+        const totalRows = filled.length;
+        const prev = filled[0] ? filled[0].filter(c=>String(c).trim()).slice(0,4).join(' / ') : '';
+        // 推奨シート判定
+        let recommended = false;
+        if(detectedVendor && detectedVendor.sheet) {
+          recommended = detectedVendor.sheet.includes(name);
+        } else {
+          const hasKingaku = raw.some(r=>r.some(c=>/^(合\s*計|小\s*計)$/.test(String(c).trim())));
+          recommended = totalRows > 0 && !(hasKingaku && totalRows < 25);
+        }
+        return { name, raw: raw.slice(0, 2000), totalRows, recommended, preview: prev };
+      });
+
+      // allSheets構築後にコンテンツベースで業者判定
+      detectedVendor = detectVendor(file.name, allSheets);
+
+      // 業者検出表示
+      const db = document.getElementById('detectedBox');
+      if(detectedVendor) {
+        db.style.display = 'flex';
+        document.getElementById('detectedMsg').textContent =
+          `「${detectedVendor.name[0]}」の列マッピングを適用します（推奨シート: ${detectedVendor.sheet ? detectedVendor.sheet[0] : '自動'}）`;
+      } else {
+        db.style.display = 'none';
+      }
+      renderSheetSelector();
+      showStep(2);
+    } catch(err) { alert('ファイルの解析に失敗しました：' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─── PDF読み込み（PDF見積書を直接ANDPAD CSVまで変換） ──────────
+async function extractPdfFullText(file) {
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const pageTexts = [];
+  for(let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    // y座標でグループ化して行を再構成（テーブルのレイアウトを崩さないため）。
+    // 同じ視覚上の行でも、項目ごとにy座標が1〜2pt程度ずれることがある
+    // （フォントのベースライン差等）ため、厳密な一致ではなく許容範囲内でクラスタリングする。
+    const Y_TOLERANCE = 2.5;
+    const sorted = content.items.slice().sort((a, b) => b.transform[5] - a.transform[5]);
+    const clusters = [];
+    sorted.forEach(it => {
+      const y = it.transform[5];
+      let cluster = clusters.find(c => Math.abs(c.y - y) <= Y_TOLERANCE);
+      if(!cluster) { cluster = { y, items: [] }; clusters.push(cluster); }
+      cluster.items.push({ x: it.transform[4], str: it.str });
+    });
+    const pageLines = clusters.map(cluster => {
+      const items = cluster.items.sort((a,b)=>a.x-b.x);
+      let line = '';
+      let lastEnd = null;
+      items.forEach(it => {
+        if(lastEnd !== null && it.x - lastEnd > 8) line += '  '; // 大きな隙間は列区切りとして2スペース挿入
+        line += it.str;
+        lastEnd = it.x + it.str.length * 5; // 簡易的な文字幅推定
+      });
+      return line;
+    });
+    pageTexts.push(pageLines.join('\n'));
+  }
+  return pageTexts.join('\n');
+}
+
+function detectVendorFromText(fullText) {
+  for(const sig of VENDOR_SIGNATURES) {
+    if(sig.sig.every(kw => fullText.includes(kw))) {
+      let vm = VENDOR_MAPS.find(v => v.name.includes(sig.name));
+      if(!vm) vm = VENDOR_MAPS.find(v => sig.name.includes(v.name[0]));
+      if(vm) return vm;
+    }
+  }
+  return null;
+}
+
+// グラフテクト（TJMデザイン）PDF専用パーサー：内訳表の主要2項目を正規表現で抽出
+function parseGraftektPdf(fullText) {
+  const items = [];
+  const defs = [
+    { label: '標準価格（配送費・取付費含）', re: /標準価格[^\n]*?([\d,]{4,})\s+([\d,]{4,})/, note: '法定福利費を含む' },
+    { label: 'オプション選択合計　詳細は仕様確認表をご確認ください', re: /オプション選択合計[^\n]*?([\d,]{4,})\s+([\d,]{4,})/, note: '' }
+  ];
+  defs.forEach(d => {
+    const m = fullText.match(d.re);
+    if(m) {
+      const teika = parseInt(m[1].replace(/,/g,''), 10);
+      const cost = parseInt(m[2].replace(/,/g,''), 10);
+      if(cost) {
+        const est = Math.round(cost / 0.8);
+        const r = makeRow('キッチン', d.label, '', 1, '式', cost, est, d.note);
+        if(teika) r.list_price = String(teika);
+        items.push(r);
+      }
+    }
+  });
+  return items;
+}
+
+// 東京暖炉 PDF専用パーサー：品目テーブルの各行を正規表現で抽出
+function parseToukyoDanroPdf(fullText) {
+  const items = [];
+  const lines = fullText.split('\n');
+  const skipName = /^(部材代合計|小計|特別値引き|計|消費税|合計|御見積り金額|名称|工事費|諸経費)/;
+  const itemRe = /^(.+?)\s+(\d+)\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s*$/;
+
+  lines.forEach(line => {
+    const t = line.trim();
+    if(!t) return;
+    const m = t.match(itemRe);
+    if(m) {
+      const [, nameContent, qty, unitprice, amount, discounted] = m;
+      const cost = parseInt(discounted.replace(/,/g,''), 10);
+      const teika = parseInt(unitprice.replace(/,/g,''), 10);
+      const q = parseInt(qty, 10) || 1;
+      if(skipName.test(nameContent.trim())) return;
+      if(!cost) return;
+      const parts = nameContent.split(/\s{2,}/);
+      const name = parts[0].trim();
+      const content = parts.length > 1 ? parts.slice(1).join(' ').trim() : '';
+      const unitCost = Math.round(cost / q);
+      const est = Math.round(unitCost / 0.8);
+      const r = makeRow('薪ストーブ工事', name, content, q, '式', unitCost, est, '');
+      if(teika) r.list_price = String(teika);
+      items.push(r);
+    }
+  });
+
+  // 工事費・諸経費・特別値引きは表の後段（合計欄）にあり、行の再構成がぶれやすいため、
+  // 行単位ではなく全文からキーワード直後の数値（3桁以上）を直接検索して拾う
+  // 工事費・諸経費・特別値引きは「部材代合計」以降の集計ブロックに固定順序で並んでいるため、
+  // 行単位のパターンではなく、ブロック内の数値トークンを出現順に抽出して位置で判定する
+  // （ブラウザのPDF抽出は行の再構成がずれやすく、キーワード直後の数値だけを拾うと
+  //   隣の行の金額を誤って拾ってしまうことがあるため、位置ベースの方が確実）
+  // 順序: [0]部材代合計(定価計) [1]部材代合計(割引後) [2]工事費 [3]諸経費 [4]小計 [5]特別値引き [6]計 [7]消費税 [8]合計
+  const blockStart = fullText.indexOf('部材代合計');
+  if(blockStart >= 0) {
+    const block = fullText.slice(blockStart, blockStart + 500);
+    const nums = (block.match(/[\d,]{3,}/g) || []).map(s => parseInt(s.replace(/,/g,''), 10));
+    if(nums.length >= 6) {
+      const koujihiCost = nums[2];
+      const shokeihiCost = nums[3];
+      const tokubetsuCost = -nums[5];
+      if(koujihiCost) items.push(makeRow('薪ストーブ工事', '工事費', '', 1, '式', koujihiCost, Math.round(koujihiCost/0.8), ''));
+      if(shokeihiCost) items.push(makeRow('薪ストーブ工事', '諸経費', '', 1, '式', shokeihiCost, Math.round(shokeihiCost/0.8), ''));
+      if(tokubetsuCost) items.push(makeRow('薪ストーブ工事', '特別値引き', '', 1, '式', tokubetsuCost, tokubetsuCost, ''));
+    }
+  }
+
+  return items;
+}
+
+async function aiAnalyzePdfText(fullText) {
+  const msgs = [['AIが解析中...','PDFの内容を認識しています'],['項目を識別中...','もう少しお待ちください']];
+  let mi=0;
+  const iv=setInterval(()=>{ mi=(mi+1)%msgs.length; document.getElementById('loadingMsg').textContent=msgs[mi][0]; document.getElementById('loadingSub').textContent=msgs[mi][1]; },1000);
+
+  const prompt = `業者見積書PDFから抽出したテキストです。\n\n${fullText.slice(0, 6000)}\n\n全明細行を抽出し、JSONのみ返してください。\n{"items":[{"folder1":"工事区分","folder2":"","folder3":"","folder4":"","name":"品名","place":"","type":"","note1":"規格・寸法","note2":"","list_price":"","wholesale_rate":"","discount_rate":"","cost_price":"単価の数値","gross_rate":"20","unit_price":"単価÷0.8の整数","qty":"数量","unit":"単位","supplier_id":"","supplier_mgr_id":"","supplier_name":"","memo":"備考","pdf_display":"表示する","master_id":""}],"summary":"一言"}\n除外:合計・小計・ヘッダー・社名行。cost_price=品目の単価（割引後の値があればその値）。数量で割った単価にする。`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:prompt}]})
+    });
+    clearInterval(iv);
+    const result = await res.json();
+    let parsed;
+    try {
+      const text = result.content.map(c=>c.text||'').join('');
+      const clean = text.replace(/```json|```/g,'').trim();
+      parsed = JSON.parse(clean);
+    } catch { parsed = { items: [], summary: 'AI解析に失敗しました。内容を手動で確認してください。' }; }
+    const items = (parsed.items||[]).map(it => {
+      if(!it.gross_rate) it.gross_rate = DEFAULT_GROSS;
+      if(!it.unit_price && it.cost_price) it.unit_price = calcEstPrice(it.cost_price, it.gross_rate);
+      if(!it.unit) it.unit = '式';
+      if(!it.qty) it.qty = '1';
+      return it;
+    });
+    applyResults(items, parsed.summary || `${items.length}件を検出しました。`, 'AI汎用解析（PDF）', null);
+  } catch(err) {
+    clearInterval(iv);
+    alert('AI解析に失敗しました：' + err.message);
+    showStep(1);
+  }
+}
+
+// 長岡タイル工業 PDF専用パーサー：複数ページ（工事区分ごとに1ページ）の明細を抽出
+// フォルダ1は固定「タイル工事」、フォルダ2は工事区分名（ガレージ車庫床タイル工事 等）
+function parseNagaokaPdf(fullText) {
+  const items = [];
+  const lines = fullText.split('\n');
+  let currentSection = '';   // フォルダ2：工事区分名（ガレージ車庫床タイル工事 等）
+  let currentProduct = '';   // 摘要：タイトル行の工事区分名より右側（製品名部分）
+  let lastItemName = '';
+  const lineRe = /^\s*\d+\s*(.+?)\s+([\d.]+)\s+(㎡|m|式|枚|個|本|台|組|ヶ所|セット)\s+¥([\d,]+)\s+¥([\d,]+)\s*$/;
+  const rowNumRe = /^\s*(\d+)\s*(.+)$/;
+
+  lines.forEach(line => {
+    if (!line.trim()) return;
+    const m = line.match(lineRe);
+    if (m) {
+      const [, nameSpec, qty, unit, unitprice] = m;
+      const parts = nameSpec.split(/\s{2,}/).filter(Boolean);
+      let name = parts[0] || '';
+      if (/^[〃″]$/.test(name)) name = lastItemName;
+      else lastItemName = name;
+      const spec = parts.slice(1).join('　');
+      const cost = parseInt(unitprice.replace(/,/g, ''), 10);
+      const q = parseFloat(qty);
+      if (!cost) return;
+      const est = Math.round(cost / 0.8);
+      // 摘要＝タイトル行の製品名部分、備考1＝元の品名（型番等）、備考2＝規格
+      const r = makeRow('タイル工事', currentProduct || name, '', q, unit, cost, est, '', currentSection);
+      r.note1 = name;
+      r.note2 = spec;
+      items.push(r);
+      return;
+    }
+    // タイトル行（数量・金額の無い、行頭が番号の行）。「○○工事」までを区分名、それより右を製品名として使う
+    const rm = line.match(rowNumRe);
+    if (rm) {
+      const text = rm[2].trim();
+      if (text && !/^(小計|消費税|合計金額)/.test(text)) {
+        const cm = text.match(/^①?(.*?工事)\s*(.*)$/);
+        if (cm) {
+          currentSection = cm[1];
+          currentProduct = cm[2].trim().replace(/\s{2,}/g, '　');
+        } else {
+          currentSection = text.split(/\s{2,}/)[0];
+          currentProduct = '';
+        }
+      }
+    }
+  });
+  return items;
+}
+
+// 砂山電気 PDF専用パーサー：3ページ目以降の部材・労務費レベルの詳細内訳を抽出し、
+// カテゴリ名（引込幹線設備工事等）をフォルダ2として分類する。
+// 諸経費・値引きは1ページ目（サマリー）から取得する。
+function parseSunayamaPdf(fullText) {
+  const items = [];
+  const lines = fullText.split('\n');
+  let currentCategory = '';
+
+  const categoryHeaderRe = /^\s*1\.\s*\d+\.電気工事-(\S.+)$/;
+  const itemRe = /^\s*(.+?)\s+([\d.]+)\s+(ｍ|m|式|個|組|ヶ所|台|本|枚|㎡|m2)\s+([\d,]+)(?:\s+([\d,]+))?\s*$/;
+
+  lines.forEach(line => {
+    if (!line.trim()) return;
+    const hm = line.match(categoryHeaderRe);
+    if (hm) { currentCategory = hm[1].trim(); return; }
+
+    const m = line.match(itemRe);
+    if (!m || !currentCategory) return;
+    const [, nameSpec, qtyStr, unit, num1, num2] = m;
+    const qty = parseFloat(qtyStr);
+    if (!qty) return;
+    let uprice, amount;
+    if (num2) { uprice = parseInt(num1.replace(/,/g, ''), 10); amount = parseInt(num2.replace(/,/g, ''), 10); }
+    else { amount = parseInt(num1.replace(/,/g, ''), 10); uprice = Math.round(amount / qty); }
+    if (!uprice) return;
+    const parts = nameSpec.split(/\s{2,}/).filter(Boolean);
+    const name = parts[0] || '';
+    const spec = parts.slice(1).join('　');
+    const est = Math.round(uprice / 0.8);
+    items.push(makeRow('電気設備工事', name, spec, qty, unit, uprice, est, '', currentCategory));
+  });
+
+  const extraDefs = [
+    { label: '諸経費', re: /^\s*諸経費\s+1\s+式\s+([\d,]+)\s*$/m },
+    { label: '値引き', re: /^\s*値引き\s+(-?[\d,]+)\s*$/m },
+  ];
+  extraDefs.forEach(d => {
+    const m = fullText.match(d.re);
+    if (m) {
+      const cost = parseInt(m[1].replace(/,/g, ''), 10);
+      if (!cost) return;
+      const est = Math.round(cost / 0.8);
+      items.push(makeRow('電気設備工事', d.label, '', 1, '式', cost, est, '', '諸経費'));
+    }
+  });
+
+  return items;
+}
+
+function handlePdfFile(file) {
+  showStep(3);
+  document.getElementById('sheetListLabel').textContent = 'PDFを解析中: ' + file.name;
+  extractPdfFullText(file).then(fullText => {
+    const vm = detectVendorFromText(fullText);
+    if(vm && vm.name.includes('東京暖炉')) {
+      detectedVendor = vm;
+      const items = parseToukyoDanroPdf(fullText);
+      applyResults(items, `${items.length}件を検出しました。`, '東京暖炉 PDF専用解析', null);
+    } else if(vm && (vm.name.includes('グラフテクト') || vm.name.includes('GRAFTEKT'))) {
+      detectedVendor = vm;
+      const items = parseGraftektPdf(fullText);
+      applyResults(items, `${items.length}件を検出しました。`, 'グラフテクト PDF専用解析', null);
+    } else if(vm && vm.name.includes('長岡タイル')) {
+      detectedVendor = vm;
+      const items = parseNagaokaPdf(fullText);
+      applyResults(items, `${items.length}件を検出しました。`, '長岡タイル PDF専用解析', null);
+    } else if(vm && vm.name.includes('砂山電気')) {
+      detectedVendor = vm;
+      const items = parseSunayamaPdf(fullText);
+      applyResults(items, `${items.length}件を検出しました。`, '砂山電気 PDF専用解析', null);
+    } else {
+      detectedVendor = null;
+      aiAnalyzePdfText(fullText);
+    }
+  }).catch(err => {
+    alert('PDFの解析に失敗しました：' + err.message);
+    showStep(1);
+  });
+}
+
+// ─── シート選択UI ─────────────────────────────────
+function renderSheetSelector() {
+  const container = document.getElementById('sheetListEl');
+  container.innerHTML = ''; selSheets.clear();
+  allSheets.forEach((sheet, idx) => {
+    // uncheck_sheets: 表紙など、既定でチェックを外しておきたいシートを指定できる
+    // uncheck_sheets_regex: シート名に製品コード等の可変部分が付く場合に正規表現で指定できる
+    const isUnchecked = detectedVendor && (
+      (detectedVendor.uncheck_sheets && detectedVendor.uncheck_sheets.includes(sheet.name)) ||
+      (detectedVendor.uncheck_sheets_regex && detectedVendor.uncheck_sheets_regex.test(sheet.name))
+    );
+    if(!isUnchecked) selSheets.add(sheet.name);
+    const div = document.createElement('div');
+    div.className = 'sheet-item' + (isUnchecked ? '' : ' on');
+    const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=!isUnchecked;
+    const info = document.createElement('div'); info.className='sheet-info';
+    info.innerHTML = `<div class="sheet-name">${esc(sheet.name)} <span style="font-size:10px;color:#bbb">(${sheet.totalRows}行)</span></div><div class="sheet-preview">${esc(sheet.preview||'（データなし）')}</div>`;
+    const badge = document.createElement('span');
+    if(detectedVendor && detectedVendor.sheet && detectedVendor.sheet.includes(sheet.name)) {
+      badge.className='badge badge-matched'; badge.textContent='推奨';
+    } else if(sheet.totalRows > 20) {
+      badge.className='badge badge-d'; badge.textContent='詳細明細';
+    } else {
+      badge.className='badge badge-o'; badge.textContent='その他';
+    }
+    div.appendChild(cb); div.appendChild(info); div.appendChild(badge);
+    div.addEventListener('click', () => {
+      cb.checked=!cb.checked; div.classList.toggle('on',cb.checked);
+      if(cb.checked) selSheets.add(sheet.name); else selSheets.delete(sheet.name);
+    });
+    container.appendChild(div);
+  });
+}
+
+// ─── 変換処理 ─────────────────────────────────────
+function startConvert() {
+  if(selSheets.size===0) { alert('シートを1つ以上選択してください'); return; }
+  showStep(3);
+
+  const targetSheets = allSheets.filter(s=>selSheets.has(s.name));
+  document.getElementById('sheetListLabel').textContent = '取り込みシート: '+targetSheets.map(s=>s.name).join(' / ');
+
+  setTimeout(() => {
+    let items, method;
+    if(detectedVendor) {
+      items = mappingParse(targetSheets, detectedVendor);
+      method = `${detectedVendor.name[0]} 列マッピング`;
+      if(items.length === 0) {
+        // 業者は判定できたが列マッピングでは0件だった場合、AI解析にフォールバックする
+        // （.xls形式のブラウザ環境依存の解析ゆらぎ等、原因不明のケースへの保険）
+        method = `${detectedVendor.name[0]} 列マッピング（0件のためAI解析にフォールバック）`;
+        aiAnalyze(targetSheets);
+        return;
+      }
+    } else {
+      items = aiFallbackParse(targetSheets);
+      method = 'AI汎用解析';
+      // 未登録業者はAIへ送る
+      aiAnalyze(targetSheets);
+      return;
+    }
+    applyResults(items, `${items.length}件を検出しました。`, method, targetSheets);
+  }, 100);
+}
+
+// ─── 拾い根拠（自社木材積算テンプレート）専用パーサー ──────
+// 造作材・ｻｯｼ枠タブ：見出し行（開口部名、材種欄が空欄）＋その下に続く材種別内訳行という構造。
+// 羽柄材タブ：見出しなしのフラットな一覧。
+// いずれも数量が0（未入力）の行は対象外とし、実際に数量が入っている行だけを取り込む。
+function hiroiParse(sheetsData) {
+  const items = [];
+  const isNum = (v) => { const n = parseFloat(v); return !isNaN(n) && n !== 0; };
+
+  sheetsData.forEach(({ name: sName, raw }) => {
+    if(sName === '羽柄材') {
+      let headerFound = false;
+      raw.forEach(row => {
+        const name = row[1];
+        if(!headerFound) { if(String(row[1]||'').trim() === '名称') headerFound = true; return; }
+        const qty = row[7];
+        if(!name || !isNum(qty)) return;
+        const zaishu = row[2] || '';
+        const tokyu = row[3] || '';
+        const spec = [row[4], row[5], row[6]].filter(v => v !== null && v !== undefined && v !== '').join('×');
+        const unit = row[8] || '本';
+        const uprice = row[10];
+        const amount = row[11];
+        const cost = isNum(uprice) ? uprice : (isNum(amount) ? amount : '');
+        if(cost === '') return;
+        const est = Math.round(Number(cost) / 0.8);
+        const note = [zaishu, tokyu].filter(Boolean).join('　');
+        const displayName = note ? String(name).trim() + '　' + note : String(name).trim();
+        items.push(makeRow('羽柄材', displayName, spec, qty, unit, cost, est, ''));
+      });
+      return;
+    }
+
+    // 造作材・建具枠・ｻｯｼ枠タブ（見出し行＋内訳行構造）
+    const folder1 = sName === 'ｻｯｼ枠' ? 'サッシ枠' : sName;
+    const noFolder2 = sName === '造作材' || sName === 'ｻｯｼ枠' || sName === '建具枠'; // フォルダ2を使わずフォルダ1直下にまとめる
+    let headerFound = false;
+    let currentHeading = '';
+    const sheetItems = [];
+    raw.forEach(row => {
+      const col0 = row[0], zaishu = row[1];
+      if(!headerFound) { if(String(col0||'').trim() === '名称') headerFound = true; return; }
+      const qty = row[5];
+      if(!zaishu) {
+        // 見出し行（開口部の種類・数）
+        if(col0 && isNum(qty)) currentHeading = String(col0).trim();
+        return;
+      }
+      if(!isNum(qty)) return;
+      const spec = [row[2], row[3], row[4]].filter(v => v !== null && v !== undefined && v !== '').join('×');
+      const unit = row[6] || '本';
+      const uprice = row[8];
+      const amount = row[9];
+      const cost = isNum(uprice) ? uprice : (isNum(amount) ? amount : '');
+      if(cost === '') return;
+      const est = Math.round(Number(cost) / 0.8);
+      const note = col0 ? String(col0).trim() : ''; // 「戸当」等の補足ラベルが入っている場合がある
+      let displayName;
+      if(sName === 'ｻｯｼ枠' || sName === '建具枠') {
+        // サッシ枠・建具枠：摘要の頭にタブ名を付ける
+        displayName = folder1 + '　' + String(zaishu).trim();
+      } else {
+        // 造作材：名称（見出しの建具名、または戸当等の行固有ラベル）＋材種
+        const meishou = note || currentHeading;
+        displayName = (meishou ? meishou + '　' : '') + String(zaishu).trim();
+      }
+      sheetItems.push(makeRow(folder1, displayName, spec, qty, unit, cost, est, '', noFolder2 ? '' : currentHeading));
+    });
+    if(noFolder2) {
+      // 名称・寸法(note1)・原単価が一致する行は同一項目とみなし、数量を合算して1行にまとめる
+      const merged = {};
+      const order = [];
+      sheetItems.forEach(r => {
+        const key = [r.name, r.note1, r.cost_price].join('|');
+        if(!merged[key]) { merged[key] = Object.assign({}, r); order.push(key); }
+        else {
+          merged[key].qty = String((parseFloat(merged[key].qty)||0) + (parseFloat(r.qty)||0));
+        }
+      });
+      order.forEach(k => items.push(merged[k]));
+    } else {
+      items.push(...sheetItems);
+    }
+  });
+  return items;
+}
+
+
+function ncnParse(sheetsData) {
+  const items = [];
+  const transportItems = [];
+  const skipName = /^(合\s*計|小\s*計|計|合計|物件番号|見積番号|工事名称|材\s*料\s*明|階|名称|【|Column)/;
+
+  // 新フォーマット（シート名「合計金額」＋「内訳明細書」）かどうかを判定。
+  // 旧フォーマット（Page004/005/006）とは列位置が異なるため、別処理として扱う。
+  const hasNewFormat = sheetsData.some(s => s.name === '内訳明細書');
+
+  if(hasNewFormat) {
+    // 「合計金額」シート：構造材本体の集計行は「内訳明細書」の詳細内訳と重複するため対象外とし、
+    // ここにしか無い「積込養生費」「運搬費(構造材)」の2項目だけを取り込む。
+    // フォルダ1は「運搬費」とし、一覧の最後に配置する。
+    const summaryAllowNames = ['積込養生費', '運搬費(構造材)', '運搬費（構造材）'];
+    const summarySheet = sheetsData.find(s => s.name === '合計金額');
+    if(summarySheet) {
+      summarySheet.raw.forEach(row => {
+        const cell = (i) => String(row[i] != null ? row[i] : '');
+        const num  = (i) => { const v=cell(i).replace(/[,，￥¥円\s]/g,''); const n=parseFloat(v); return isNaN(n)?'':n; };
+        const rowText = row.map(v=>String(v||'')).join('');
+        if(!rowText.trim()) return;
+        if(row.some(v => /^(項\s*目|数量|単位|金額|内容|備\s*考)$/.test(String(v||'').trim()))) return;
+        const name = cell(0).trim();
+        if(!name || skipName.test(name)) return;
+        if(!summaryAllowNames.includes(name)) return;
+        const qty    = num(2);
+        const unit   = cell(3).trim() || '式';
+        const amount = num(4);
+        const note   = cell(5).trim();
+        if(!qty && !amount) return;
+        const costPrice = amount || '';
+        const estPrice  = costPrice ? Math.round(Number(costPrice)/0.8) : '';
+        transportItems.push(makeRow('運搬費', name, note, qty||1, unit, costPrice, estPrice, ''));
+      });
+    }
+
+    // 「内訳明細書」シート：構造材の詳細内訳。カテゴリ見出し【】はA列（col0）に入る
+    // （旧フォーマットではB列だった）。運搬費（構造材）セクションは合計金額シート側で
+    // 取得済みのため除外する。
+    const detailSheet = sheetsData.find(s => s.name === '内訳明細書');
+    if(detailSheet) {
+      let cat = '構造材';
+      let skipSection = false;
+      detailSheet.raw.forEach(row => {
+        const cell = (i) => String(row[i] != null ? row[i] : '');
+        const num  = (i) => { const v=cell(i).replace(/[,，￥¥円\s]/g,''); const n=parseFloat(v); return isNaN(n)?'':n; };
+        const rowText = row.map(v=>String(v||'')).join('');
+        if(!rowText.trim()) return;
+        if(/材\s*料\s*明\s*細|内\s*訳\s*明\s*細|物件番号|見積番号|工事名称/.test(rowText)) return;
+        if(row.some(v => /^(名称|数量|単位|単価|金額|階|巾|成|長|材積)$/.test(String(v||'').trim()))) return;
+
+        const b0 = cell(0).trim();
+        if(/^【.+】$/.test(b0)) {
+          cat = b0.replace(/[【】]/g,'');
+          skipSection = /運搬費/.test(cat);
+          return;
+        }
+        if(skipSection) return;
+
+        const name = cell(1).trim();
+        if(!name || skipName.test(name) || /合\s*計$/.test(name) || /^Column/.test(name)) return;
+
+        const qty     = num(5);
+        const rawUnit = cell(7).trim() || '個';
+        let unit;
+        if(/^(金物取付費|構造材加工費)/.test(name)) {
+          unit = '式';
+        } else {
+          unit = (rawUnit === 'ｍ3' || rawUnit === 'm3' || rawUnit === 'M3') ? '本' : rawUnit;
+        }
+
+        const amountRaw = num(9);
+        let costPrice = '';
+        if(amountRaw && qty) {
+          costPrice = Math.round(Number(amountRaw) / Number(qty));
+        } else if(amountRaw) {
+          costPrice = amountRaw;
+        }
+        if(!qty && !costPrice) return;
+
+        const w = cell(2).trim(), h = cell(3).trim(), l = cell(4).trim();
+        const spec = [w, h, l].filter(Boolean).join('×');
+
+        const qtyFinal = qty || (costPrice ? 1 : qty);
+        const estPrice = costPrice ? Math.round(Number(costPrice)/0.8) : '';
+        items.push(makeRow(cat, name, spec, qtyFinal, unit, costPrice, estPrice, ''));
+      });
+    }
+
+    return items.concat(transportItems);
+  }
+
+  // Page004：構造材本体（構造材・金物費・床用面材・壁用面材・金物取付費・加工費）は
+  // Page005/Page006の詳細内訳と完全に重複する（二重計上になる）ため対象外とし、
+  // Page004にしか無い「積込養生費」「運搬費(構造材)」の2項目だけを取り込む。
+  // フォルダ1は「運搬費」とし、一覧の最後に配置する。
+  const page004AllowNames = ['積込養生費', '運搬費(構造材)', '運搬費（構造材）'];
+
+  sheetsData.forEach(({ name: sName, raw }) => {
+    if (sName !== 'Page004') return;
+    let headerFound = false;
+    raw.forEach(row => {
+      const cell = (i) => String(row[i] != null ? row[i] : '');
+      const num  = (i) => { const v=cell(i).replace(/[,，￥¥円\s]/g,''); const n=parseFloat(v); return isNaN(n)?'':n; };
+      const rowText = row.map(v=>String(v||'')).join('');
+      if(!rowText.trim()) return;
+      if(/材\s*料\s*明\s*細|内\s*訳\s*明\s*細|物件番号|見積番号|工事名称/.test(rowText)) return;
+      if(row.some(v => /^(名称|数量|単位|単価|金額|階|巾|成|長|材積)$/.test(String(v||'').trim()))) return;
+
+      const name = cell(0).trim();
+      if(!name || skipName.test(name)) return;
+      if(!page004AllowNames.includes(name)) return;
+      const qty    = num(3);
+      const unit   = cell(4).trim() || '式';
+      const amount = num(5);
+      const note   = cell(6).trim();
+      if(!qty && !amount) return;
+      const costPrice = amount || '';
+      const estPrice  = costPrice ? Math.round(Number(costPrice)/0.8) : '';
+      transportItems.push(makeRow('運搬費', name, note, qty||1, unit, costPrice, estPrice, ''));
+    });
+  });
+
+  // Page005・Page006：構造材の詳細内訳（1つの帳票が印刷ページ単位でシート分割されているだけ
+  // なので、【金物費】等のカテゴリがページをまたいでいても連続した1つの明細として扱う）
+  const detailRows = [];
+  ['Page005', 'Page006'].forEach(sn => {
+    const sheet = sheetsData.find(s => s.name === sn);
+    if (sheet) detailRows.push(...sheet.raw.map(row => ({ row, sName: sn })));
+  });
+
+  let cat = '構造材';
+  let skipSection = false; // Page006の「運搬費(構造材)」はPage004側で取得済みのため除外
+  detailRows.forEach(({ row, sName }) => {
+    const cell = (i) => String(row[i] != null ? row[i] : '');
+    const num  = (i) => { const v=cell(i).replace(/[,，￥¥円\s]/g,''); const n=parseFloat(v); return isNaN(n)?'':n; };
+    const rowText = row.map(v=>String(v||'')).join('');
+    if(!rowText.trim()) return;
+    if(/材\s*料\s*明\s*細|内\s*訳\s*明\s*細|物件番号|見積番号|工事名称/.test(rowText)) return;
+    if(row.some(v => /^(名称|数量|単位|単価|金額|階|巾|成|長|材積)$/.test(String(v||'').trim()))) return;
+
+    const b1 = cell(1).trim();
+    if(/^【.+】$/.test(b1)) {
+      cat = b1.replace(/[【】]/g,'');
+      skipSection = /運搬費/.test(cat);
+      return;
+    }
+    if(skipSection) return;
+
+    const name = b1;
+    if(!name || name.length < 1 || skipName.test(name) || /^Column/.test(name)) return;
+
+    const qty     = num(7);
+    const rawUnit = cell(10).trim() || '個';
+    let unit;
+    if(/^(金物取付費|構造材加工費)/.test(name)) {
+      // ｍ3材積を元にした加工費・取付費は「式」として扱う（本数ではない）
+      unit = '式';
+    } else {
+      // m3表記は「本」に変換
+      unit = (rawUnit === 'ｍ3' || rawUnit === 'm3' || rawUnit === 'M3') ? '本' : rawUnit;
+    }
+
+    const amountRaw = sName === 'Page005' ? num(13) : num(12);
+    let costPrice = '';
+    if(amountRaw && qty) {
+      costPrice = Math.round(Number(amountRaw) / Number(qty));
+    } else if(amountRaw) {
+      costPrice = amountRaw;
+    }
+    if(!qty && !costPrice) return;
+
+    const w=cell(4).trim(), h=cell(5).trim(), l=cell(6).trim();
+    const spec = [w,h,l].filter(Boolean).join('×');
+
+    // 数量欄が空欄（ｍ3材積のみで本数が無い金物取付費・構造材加工費等）の場合は
+    // 原単価＝金額そのものとして数量1で登録する（数量空欄だと金額が0扱いになるため）
+    const qtyFinal = qty || (costPrice ? 1 : qty);
+    const estPrice = costPrice ? Math.round(Number(costPrice)/0.8) : '';
+    items.push(makeRow(cat, name, spec, qtyFinal, unit, costPrice, estPrice, ''));
+  });
+
+  return items.concat(transportItems);
+}
+
+// ─── 列マッピングパース ───────────────────────────
+function mappingParse(sheetsData, vm) {
+  if(vm.ncn_mode) return ncnParse(sheetsData);
+  if(vm.hiroi_mode) return hiroiParse(sheetsData);
+
+  const items = [];
+  const skipPat = /^(合\s*計|小\s*計|小計|合計|消費税|税込|税別|ページ|PAGE|御見積|発注書|下記の|お見積)|(^計$)/;
+  const isHeader = (row, vm) => {
+    if(!vm.headerKeyword) return false;
+    return row.some(c => String(c).includes(vm.headerKeyword));
+  };
+
+  sheetsData.forEach(({ name: sName, raw }) => {
+    const effVm = (vm.sheet_overrides && vm.sheet_overrides[sName]) ? Object.assign({}, vm, vm.sheet_overrides[sName]) : vm;
+    // sheet_name_regex: 指定パターンに一致しないシートは丸ごとスキップする
+    // （税込／税抜のように同一内容が重複するシート構成で、誤って両方選択されても二重計上を防ぐ）
+    if(vm.sheet_name_regex && !vm.sheet_name_regex.test(sName)) return;
+    let headerFound = !effVm.headerKeyword; // headerKeywordがなければ最初から処理
+    let headerRowIdx = -1;
+    let lastItemName = '', lastUnit = '', lastSpec = '', lastNote2 = '', lastCat = effVm.cat_label || sName, lastCatalogNote = '', lastIsVeritis = false;
+    let lastRoomLabel = ''; // cat_bracket_prefix用：部屋名を品名の先頭に付けるため保持
+    let pendingHeadingName = ''; // heading_then_price用：価格なし品名行を次の価格行まで保持
+    let pendingGroupName = ''; // heading_group_mode用：見出しを複数の価格行に持ち越すため保持
+    let lastGroupLabel = ''; // col_group_marker用：区分見出し行のラベルを次の見出しまで保持
+    const nameCarryState = {}; // name_carry_cols用：列ごとの最後の非空値を保持（部屋名など、最初の行にしか入っていない列の引き継ぎ）
+    let prevRowName = ''; // two_row_name用
+    let lastPushedItem = null; // two_row_name: 型番等の次行を直前品目の規格として追記するため
+    let totalRowCount = 0; // stop_after_total_count用：「合計／小計」等の集計行が出た回数
+    let foundStartKeyword = !effVm.skip_until_keyword; // skip_until_keyword用
+    let rowsAfterKeyword = -1; // skip_until_keyword用：キーワード行からの経過行数
+
+    raw.forEach((row, ri) => {
+      // skip_until_keyword: 指定した文言（「内訳明細」等）が出現する行を見つけるまでは
+      // 全て読み飛ばし、見つかった行からskip_after_keyword_rows行分（見出し行等）を
+      // さらに読み飛ばしてから通常のパースを開始する。サマリー表の項目数が案件ごとに
+      // 変動し、固定行数のskip_rowsでは内訳明細の開始位置がずれてしまう場合に使う
+      if(effVm.skip_until_keyword) {
+        if(!foundStartKeyword) {
+          if(row.some(c => String(c||'').includes(effVm.skip_until_keyword))) {
+            foundStartKeyword = true;
+            rowsAfterKeyword = 0;
+          }
+          return;
+        }
+        if(rowsAfterKeyword >= 0) {
+          rowsAfterKeyword++;
+          if(rowsAfterKeyword <= (effVm.skip_after_keyword_rows || 0)) return;
+          rowsAfterKeyword = -1; // 以降は通常処理へ
+        }
+      }
+      // skip_rows: 先頭N行をスキップ
+      if(effVm.skip_rows && ri < effVm.skip_rows) return;
+      // stop_after_total_count: 指定回数だけ集計行（合計／小計）が出たら、それ以降は
+      // より詳細なレベルの内訳（既に上位の集計行に含まれ二重計上になる）とみなして処理を打ち切る
+      // （合計・小計の文言がcol_name以外の列に入っているケースもあるため行全体を見る）
+      if(effVm.stop_after_total_count) {
+        if(totalRowCount >= effVm.stop_after_total_count) return;
+        if(row.some(c => /^(合\s*計|小\s*計)$/.test(String(c||'').trim().replace(/[\s\u3000]/g,'')))) totalRowCount++;
+      }
+
+      // ヘッダー行を見つけたら処理開始
+      if(!headerFound) {
+        if(isHeader(row, effVm)) { headerFound = true; headerRowIdx = ri; }
+        return;
+      }
+      // ページ区切りで再度現れるヘッダー行（同じheaderKeywordを含む行）はスキップ
+      if(effVm.headerKeyword && isHeader(row, effVm)) return;
+
+      // skip_after_header: ヘッダー行直後のN行（集計サマリー等）を除外し、それより後ろだけ変換する
+      if(effVm.skip_after_header && headerRowIdx >= 0 && (ri - headerRowIdx) <= effVm.skip_after_header) return;
+
+      const allStr = row.map(c=>String(c||'')).join('');
+      if(!allStr.trim()) return;
+
+      // 改行セルを含むヘッダー2行目（例: "数量\n13.9311"）はスキップ
+      if(row.some(cell => /数量|単位|金額|名\s*称/.test(String(cell||'')) && String(cell||'').includes('\n'))) return;
+
+      const getCol = (ci) => {
+        if(ci < 0 || ci >= row.length) return '';
+        const v = String(row[ci]||'');
+        const parts = v.split(/[\r\n]+/);
+        return parts[parts.length-1].trim();
+      };
+      const getNum = (ci) => {
+        if(ci < 0 || ci >= row.length) return '';
+        const raw_val = row[ci];
+        // セル値が数値型の場合はそのまま（0はプレースホルダとして除外するが、値引き等の負数は保持する）
+        if(typeof raw_val === 'number') return raw_val !== 0 ? raw_val : '';
+        const v = String(raw_val||'').trim();
+        if(!v) return '';
+        return parseFloat(v.replace(/[,，￥¥円\s]/g,'')) || '';
+      };
+
+      // スキップ行
+      const nameRaw = getCol(effVm.col_name);
+
+      // row_type_hierarchy: 行種別列（S=大分類集計行／F=部屋別集計行／M=品目行）を持つ形式（パナソニックなど）
+      if(effVm.row_type_hierarchy) {
+        const rowType = effVm.col_row_type >= 0 ? getCol(effVm.col_row_type) : '';
+        if(rowType === 'S') { lastCat = getCol(effVm.col_cat_name); lastRoomLabel = ''; return; }
+        if(rowType === 'F') {
+          lastRoomLabel = getCol(effVm.col_cat_name);
+          // ＶＥＲＩＴＩＳ製品グループかどうかを判定（品名列にブランド名が入っている）
+          lastIsVeritis = nameRaw.includes('ＶＥＲＩＴＩＳ');
+          return;
+        }
+        if(rowType === 'M') {
+          const qty = getNum(effVm.col_qty);
+          const uprice = effVm.col_uprice >= 0 ? getNum(effVm.col_uprice) : '';
+          if(!qty && !uprice) return; // 選択仕様・注意書きなど、金額を伴わない注記行はスキップ
+          const spec = effVm.col_spec >= 0 ? getCol(effVm.col_spec) : '';
+          const note = effVm.col_note >= 0 ? getCol(effVm.col_note) : '';
+          let costPrice = uprice || '';
+          let listPrice = '';
+          if(lastIsVeritis && costPrice) {
+            // ＶＥＲＩＴＩＳ：現在の金額を定価とし、原単価はその24.5％とする
+            listPrice = costPrice;
+            costPrice = Math.round(Number(costPrice) * 0.245);
+          }
+          const estPrice = costPrice ? Math.round(Number(costPrice)/0.8) : '';
+          const folder1Val = (lastCat === 'ホームライン') ? '既製品造作材' : (vm.cat_label || sName);
+          const displayName = lastRoomLabel ? (lastRoomLabel + '　' + nameRaw) : nameRaw;
+          const r = makeRow(folder1Val, displayName, spec, qty, '', costPrice, estPrice, note, '');
+          if(listPrice) r.list_price = String(listPrice);
+          items.push(r);
+        }
+        return;
+      }
+
+      if(skipPat.test(nameRaw.replace(/[\s＊*]/g,''))) return;
+      if(/^[□■]/.test(nameRaw.trim())) return;
+      // skip_name_regex: 他のシートで既に取り込み済みの行など、指定パターンに一致する品名を除外する
+      if(effVm.skip_name_regex && effVm.skip_name_regex.test(nameRaw.trim())) return;
+      // only_names: 指定した名称の行だけを取り込む（他は無視）。他シートで既に取り込んだ内容と
+      // 重複するシートから、そこにしか無い特定項目だけを拾いたい場合に使う
+      if(effVm.only_names && !effVm.only_names.includes(nameRaw.trim())) return;
+      // ページ区切りに繰り返し出てくる定型文（消費税注記・件名・備考・Page等）をスキップ
+      if(/消費税は含まれて|^件\s*名[：:]|^備\s*考[：:]|^管理[：:]|^Page$/.test(nameRaw)) return;
+      // ＊・*・※で始まる注記・注意書き行（数量・単価等を伴わない単独の備考）は、
+      // 型番の続き行と誤認識されて直前品目の備考に混入してしまうためスキップする
+      if(/^[＊*※]/.test(nameRaw.trim())) {
+        const hasOther = [effVm.col_qty, effVm.col_uprice, effVm.col_amount].some(ci => ci >= 0 && getCol(ci));
+        if(!hasOther) {
+          // 注記は複数行に折り返される場合があるため、続く行も次の品目行が現れるまで追記対象から外す
+          lastPushedItem = null;
+          return;
+        }
+      }
+      // stop_keyword: 単位列にキーワードが出たら以降をすべてスキップ
+      if(effVm.stop_keyword) {
+        const unitCell = effVm.col_unit >= 0 ? getCol(effVm.col_unit) : '';
+        if(unitCell.includes(effVm.stop_keyword)) { headerFound = false; return; }
+      }
+      // Column1等のダミーヘッダーをスキップ
+      if(/^Column\d+$/.test(nameRaw)) return;
+      if(effVm.skip_zero_name && nameRaw === '0.0') return;
+      // 内訳・仕様・数量などのヘッダー行をスキップ
+      if(/^内[\s　]*訳/.test(nameRaw)) return;
+
+      // 工事区分行（col_catが指定されている場合）
+      if(effVm.col_cat >= 0) {
+        const cat = getCol(effVm.col_cat);
+        if(cat) lastCat = cat;
+      }
+
+      // col_group_marker / col_group_label: 別列（marker）に値がある行を区分見出し行とみなし、
+      // 同じ行のlabel列の文字をフォルダ2として以降の行に引き継ぐ（見出し行自体は品目登録しない）。
+      // 品目行はmarker列が空欄で判定する（col_catと違い、通常の品目行では上書きされない）。
+      if(effVm.col_group_marker >= 0) {
+        const marker = getCol(effVm.col_group_marker);
+        if(marker) {
+          lastGroupLabel = getCol(effVm.col_group_label >= 0 ? effVm.col_group_label : effVm.col_name);
+          return;
+        }
+      }
+
+      // cat_switch: 品名が指定キーワードに一致した行から、以降のフォルダ1を切り替える
+      // （該当行自体も新しいカテゴリに含まれる。次の切替キーワードが来るまで有効）
+      if(effVm.cat_switch) {
+        for(const cs of effVm.cat_switch) {
+          if(nameRaw.includes(cs.at)) { lastCat = cs.label; break; }
+        }
+      }
+
+      // cat_keywords: 指定した見出し名と完全一致する行だけをフォルダ2の見出しとして扱う
+      // （cat_by_blank_priceだと「単価・金額が空欄の未確定項目行」まで見出しと誤認するケース向けの、より安全な代替）
+      if(effVm.cat_keywords) {
+        const nt = nameRaw.trim();
+        if(effVm.cat_keywords.includes(nt)) { lastCat = nt; return; }
+      }
+
+      // cat_by_blank_price: 単価・金額の両方が「本当に空欄」（数値0とは区別）の行を
+      // 見出し行（工事区分名）として扱う。数量・単位だけのダミー値が入っていても対象。
+      // 明示的に0円が入っている行（金額欄に本当に0がある無償項目等）は対象外＝通常の品目として処理する。
+      if(effVm.cat_by_blank_price) {
+        const isBlankCell = (ci) => {
+          if(ci < 0 || ci >= row.length) return true;
+          const v = row[ci];
+          return v === undefined || v === null || String(v).trim() === '';
+        };
+        const nt = nameRaw.trim();
+        if(nt && !/^[＊*※]/.test(nt) && isBlankCell(effVm.col_uprice) && isBlankCell(effVm.col_amount)) {
+          lastCat = nt;
+          return;
+        }
+      }
+
+      // cat_bracket: 行全体が【】で囲まれている場合のみフォルダ1に使用（文中の【特注】等の修飾語は除外）
+      // single_folder指定時はフォルダ変更を行わず、見出し行として読み飛ばすだけにする
+      if(effVm.cat_bracket) {
+        const nameCell = getCol(effVm.col_name).trim();
+        const m = nameCell.match(/^【([^】]+)】/);
+        if(m) {
+          if(effVm.single_folder) return;
+          const rawLabel = m[1].trim();
+          let catText = rawLabel.replace(/[\s\u3000　]/g,'');
+          // cat_bracket_prefix: 「AD-01」「AW-03」のような記号は先頭の英字コードのみでフォルダをまとめ、
+          // 残り（部屋名部分）は品名の先頭に付ける部屋名として保持する
+          if(effVm.cat_bracket_prefix) {
+            const pm = catText.match(/^([A-Za-zＡ-Ｚａ-ｚ]+)[-－0-9０-９]+/);
+            if(pm) {
+              catText = pm[1];
+              lastRoomLabel = rawLabel.replace(/^[A-Za-zＡ-Ｚａ-ｚ]+[-－0-9０-９]+/, '').replace(/[\s\u3000]+/g, '　').trim();
+            }
+          }
+          lastCat = catText;
+          return;
+        }
+      }
+
+      // "○○工事"のような単独行（数量・単価等を伴わない）は工事区分（フォルダ名）として扱う。
+      // disable_kouji_heading指定時は、この汎用判定を行わない（様邸名等「〜工事」で終わる
+      // プロジェクト名の行を誤って区分見出しとして扱ってしまうケース向け）
+      if(!effVm.disable_kouji_heading) {
+        const t = nameRaw.trim();
+        if(t && /工事$/.test(t) && t.length <= 20) {
+          const hasOther = [effVm.col_spec, effVm.col_qty, effVm.col_unit, effVm.col_uprice, effVm.col_amount]
+            .some(ci => ci >= 0 && getCol(ci));
+          if(!hasOther) {
+            lastCat = effVm.strip_num_prefix_cat ? t.replace(/^（[0-9０-９]+）\s*/, '') : t;
+            lastRoomLabel = '';
+            return;
+          }
+        }
+      }
+
+      // ＜…＞で囲まれた行をフォルダ1として使用（＜備考＞等の注記見出しは除外）
+      // single_folder指定時はフォルダ変更を行わず、見出し行として読み飛ばすだけにする
+      // keep_angle_bracket_items指定時は、この山括弧見出し扱いを行わず通常の品目として処理する
+      // （＜引込み延長工事＞のように、山括弧付きの名称自体が価格を持つ品目であるケース向け）
+      if(!effVm.keep_angle_bracket_items) {
+        const nameCell = getCol(effVm.col_name);
+        const m = nameCell.match(/^[＜<](.+)[＞>]$/);
+        if(m && !/^備\s*考$/.test(m[1].trim())) { if(!effVm.single_folder) lastCat = m[1].trim(); return; }
+        if(m) return; // ＜備考＞行自体は登録もフォルダ変更もせずスキップ
+        // 番号行（「８・」など全角中点区切りの箇条書き見出し）をスキップ（小数点「7.52」等は対象外）
+        if(/^[０-９0-9]+・/.test(nameCell)) return;
+        if(nameCell.length > 30 && !getCol(effVm.col_unit)) return;
+      }
+
+      // cat_solo_row: 品名列のみ値があり、規格・数量・単位・単価・金額が全て空の行を
+      // 見積フォルダ名（工事区分）として採用する
+      if(effVm.cat_solo_row) {
+        const hasOther = [effVm.col_spec, effVm.col_qty, effVm.col_unit, effVm.col_uprice, effVm.col_amount]
+          .some(ci => ci >= 0 && getCol(ci));
+        if(nameRaw && !hasOther) { lastCat = nameRaw.replace(/[\s\u3000]/g,''); return; }
+      }
+
+      // catalog_seq: メニュー型カタログ見積（山川電匠など）。col_seqに番号がある行のみ品目行として扱い、
+      // 金額が0（＝未選択）の品目は登録せず、続く型番・規格行が直前の別の選択済み品目に混入しないようにする
+      if(effVm.catalog_seq) {
+        const seqVal = effVm.col_seq >= 0 ? getCol(effVm.col_seq) : '';
+        const amount = effVm.col_amount >= 0 ? getNum(effVm.col_amount) : '';
+        const uprice = effVm.col_uprice >= 0 ? getNum(effVm.col_uprice) : '';
+        if(seqVal && nameRaw) {
+          // 〃（同上）は選択有無に関わらず直前行の備考の文章を引き継ぐため、毎回追跡する
+          let note = effVm.col_note >= 0 ? getCol(effVm.col_note) : '';
+          if(/^[〃″"]+$/.test(note.replace(/[\s\u3000]/g,''))) note = lastCatalogNote;
+          else if(note) lastCatalogNote = note;
+          if(amount) {
+            const qty = getNum(effVm.col_qty);
+            const unit = getCol(effVm.col_unit);
+            const costPrice = uprice || amount || '';
+            const estPrice = costPrice ? Math.round(Number(costPrice)/0.8) : '';
+            const folder1Val = effVm.cat_to_folder2 ? (vm.cat_label || sName) : lastCat;
+            const folder2Val = effVm.cat_to_folder2 ? lastCat : '';
+            const newItem = makeRow(folder1Val, nameRaw, '', qty, unit, costPrice, estPrice, '', folder2Val);
+            if(note) newItem.note2 = note;
+            items.push(newItem);
+            lastPushedItem = newItem;
+          } else {
+            // 未選択の品目：この後に続く型番・規格行を無関係な品目に混入させないためクリア
+            lastPushedItem = null;
+          }
+        } else if(nameRaw) {
+          if(lastPushedItem) {
+            lastPushedItem.note1 = lastPushedItem.note1 ? (lastPushedItem.note1 + ' ' + nameRaw) : nameRaw;
+          }
+        }
+        return;
+      }
+
+      // heading_group_mode: 品名なし・価格なしの見出し行の後に、複数の価格行（規格違い等）が
+      // 連続して続くタイプ（星野建具の新フォーマット等）。品名が完全に空欄の行（区切り行）で
+      // 見出しの持ち越しをリセットする。備考1＝各行自身の品名（規格・寸法）、備考2＝摘要列（"は同上）。
+      if(effVm.heading_group_mode) {
+        const qty = effVm.col_qty >= 0 ? getNum(effVm.col_qty) : '';
+        const uprice = effVm.col_uprice >= 0 ? getNum(effVm.col_uprice) : '';
+        const amount = effVm.col_amount >= 0 ? getNum(effVm.col_amount) : '';
+        if(!nameRaw) {
+          // 完全な空欄行（区切り行）：見出しの持ち越しをリセットする
+          pendingGroupName = '';
+          return;
+        }
+        if(!qty && !uprice && !amount) {
+          // 価格なしの見出し行：以降の価格行のために品名を保持する（複数行に持ち越す）
+          pendingGroupName = nameRaw;
+          return;
+        }
+        // 価格あり行：見出しがあればそれを摘要、なければ自分の品名を摘要にする
+        const name = pendingGroupName || nameRaw;
+        let spec1 = nameRaw; // 備考1＝自分自身の品名（規格・寸法）
+        if(effVm.note1_half_width) spec1 = toHalfWidthAlnum(spec1);
+        let spec2 = effVm.col_note >= 0 ? getCol(effVm.col_note) : '';
+        if(/^[\s\u3000]*[”″"][\s\u3000]*$/.test(spec2)) spec2 = lastNote2;
+        else if(spec2) lastNote2 = spec2;
+        const unit = effVm.col_unit >= 0 ? getCol(effVm.col_unit) : '';
+        const costPrice = uprice || amount || '';
+        const estPrice = costPrice ? Math.round(Number(costPrice)/0.8) : '';
+        const qtyResolvedH = qty || (costPrice ? 1 : qty);
+        const rHG = makeRow(lastCat, name, spec1, qtyResolvedH, unit, costPrice, estPrice, '');
+        rHG.note2 = spec2;
+        items.push(rHG);
+        return;
+      }
+
+      // heading_then_price: 品名（価格なし）行の次に、規格＋数量・単価の行が続くタイプ
+      // （星野建具店など。two_row_nameとは逆の順序）
+      if(effVm.heading_then_price) {
+        const qty = effVm.col_qty >= 0 ? getNum(effVm.col_qty) : '';
+        const uprice = effVm.col_uprice >= 0 ? getNum(effVm.col_uprice) : '';
+        const amount = effVm.col_amount >= 0 ? getNum(effVm.col_amount) : '';
+        if(!qty && !uprice && !amount) {
+          // 価格なし行：次の価格行のために品名として保持しておく
+          if(nameRaw) pendingHeadingName = nameRaw;
+          return;
+        }
+        // 価格あり行：保持していた品名＋この行の値（規格）で1件登録する
+        const name = pendingHeadingName || nameRaw;
+        let spec = pendingHeadingName ? nameRaw : (effVm.col_spec >= 0 ? getCol(effVm.col_spec) : '');
+        if(effVm.note1_half_width) spec = toHalfWidthAlnum(spec);
+        if(!name) return;
+        const unit = effVm.col_unit >= 0 ? getCol(effVm.col_unit) : '';
+        const costPrice = uprice || amount || '';
+        const estPrice = costPrice ? Math.round(Number(costPrice)/0.8) : '';
+        const qtyResolvedH = qty || (costPrice ? 1 : qty);
+        items.push(makeRow(lastCat, name, spec, qtyResolvedH, unit, costPrice, estPrice, effVm.col_note >= 0 ? getCol(effVm.col_note) : ''));
+        pendingHeadingName = '';
+        return;
+      }
+
+      // two_row_name: 品名行の次に型番・規格のみの行が続くタイプ（岩瀬産業など）
+      if(effVm.two_row_name) {
+        const getNumSigned = (ci) => {
+          if(ci < 0 || ci >= row.length) return '';
+          const raw_val = row[ci];
+          if(typeof raw_val === 'number') return raw_val;
+          const v = String(raw_val||'').trim();
+          if(!v) return '';
+          const n = parseFloat(v.replace(/[,，￥¥円\s]/g,''));
+          return isNaN(n) ? '' : n;
+        };
+        const qty = getNumSigned(effVm.col_qty); // 値引き行（数量がマイナス）も拾えるよう符号付きで取得
+        const uprice = effVm.col_uprice >= 0 ? getNum(effVm.col_uprice) : '';
+        const amount = effVm.col_amount >= 0 ? getNum(effVm.col_amount) : '';
+        if(qty || uprice || amount) {
+          // 数量・単価のある行＝品目行。そのまま登録する
+          let name = nameRaw;
+          if(!name) return;
+          if(effVm.cat_bracket_prefix && lastRoomLabel) name = lastRoomLabel + '　' + name;
+          const spec = effVm.col_spec >= 0 ? getCol(effVm.col_spec) : buildSpec(row, effVm);
+          const unit = getCol(effVm.col_unit);
+          const costPrice = uprice || '';
+          const estPrice = costPrice ? Math.round(Number(costPrice)/0.8) : '';
+          // cat_label_map: カテゴリコード（AD/AW等）を表示用の名称に変換する
+          const mappedCat = (effVm.cat_label_map && effVm.cat_label_map[lastCat] !== undefined) ? effVm.cat_label_map[lastCat] : lastCat;
+          const folder1Val = effVm.cat_to_folder2 ? (vm.cat_label || sName) : mappedCat;
+          const folder2Val = effVm.cat_to_folder2 ? mappedCat : '';
+          const newItem = makeRow(folder1Val, name, spec, qty, unit, costPrice, estPrice, getCol(effVm.col_note), folder2Val);
+          if(effVm.col_list_price >= 0) {
+            const lp = getNum(effVm.col_list_price);
+            if(lp) newItem.list_price = String(lp);
+          }
+          items.push(newItem);
+          lastPushedItem = newItem;
+        } else if(nameRaw) {
+          // 数量等が無い行＝直前の品目行に続く型番・規格行として追記する
+          if(lastPushedItem) {
+            lastPushedItem.note1 = lastPushedItem.note1 ? (lastPushedItem.note1 + ' ' + nameRaw) : nameRaw;
+          }
+        }
+        return;
+      }
+
+      // name_onlyモード（品名のみ登録）
+      if(effVm.name_only) {
+        if(!nameRaw || nameRaw.length < 2) return;
+        if(skipPat.test(nameRaw)) return;
+        const spec = effVm.col_spec >= 0 ? getCol(effVm.col_spec) : '';
+        items.push(makeRow(lastCat, nameRaw, spec, '', '式', '', '', ''));
+        return;
+      }
+
+      // 通常行処理
+      let name = nameRaw;
+      // 品名の〃（完全一致、または「〃＋続きの文言」のパターンに対応）
+      if(effVm.ditto) {
+        const dittoMatch = name.match(/^[〃″"][\s\u3000]*(.*)$/);
+        if(dittoMatch) {
+          const rest = dittoMatch[1].trim();
+          name = rest ? (lastItemName + rest) : lastItemName;
+          lastItemName = name;
+        } else if(name) {
+          lastItemName = name;
+        }
+      } else if(name) {
+        lastItemName = name;
+      }
+      if(!name || name.length < 1) return;
+
+      // 単位の〃（ditto:trueの業者のみ引き継ぎ）
+      let unit = effVm.col_unit >= 0 ? getCol(effVm.col_unit).replace(/[\s\u3000]/g,'') : '';
+      if(effVm.ditto) {
+        if(/^[〃″"]$/.test(unit) || !unit) unit = lastUnit || '式';
+        else lastUnit = unit;
+      }
+
+      const qty      = getNum(effVm.col_qty);
+      const uprice   = effVm.col_uprice >= 0 ? getNum(effVm.col_uprice) : '';
+      const amount   = effVm.col_amount >= 0 ? getNum(effVm.col_amount) : '';
+
+      // 原単価 = 単価を優先、なければ金額（数量の有無に関わらず）
+      let costPrice = uprice || amount || '';
+      // amount_fallback_is_total: 単価が空欄で金額のみ入っている行の「金額」は、
+      // 既にその行の数量分の合計金額であるとみなし、数量で割って1つあたりの原単価に変換する
+      // （渡部水道など、単価欄が空の行だけ金額が合計値になっているケース向け）
+      if(effVm.amount_fallback_is_total && !uprice && amount && qty && qty !== 1) {
+        costPrice = amount / qty;
+      }
+      // unit_cost_from_amount: 単価列がｍ3単価等の「本数で割る前」の単価の場合、
+      // 金額（小計＝単価×ｍ3等）を本数で割った「1本あたりの原単価」に置き換える
+      // （小林産業の横架材・柱材等、単価がｍ3単価で入っているケース向け）
+      if(effVm.unit_cost_from_amount && amount && qty) {
+        costPrice = Math.round(Number(amount) / Number(qty));
+        // 単価をｍ3単価から1本あたりに換算した以上、単位も「本」で統一する
+        if(/^(m3|ｍ3|M3|㎥|m³|M³)$/i.test(unit.trim())) unit = '本';
+      }
+      // skip_empty_qty:true の場合、数量空欄はスキップ
+      if(effVm.skip_empty_qty && !qty) return;
+      if(!qty && !costPrice && !amount) return;
+      // require_qty: 単価だけがあり数量が空欄の行（未使用の単価表・参考単価行）を除外する
+      // （小林産業の積算シート等、単価一覧の中に実際に発注されていない項目が混在するケース向け）
+      if(effVm.require_qty && !qty) return;
+      // require_qty_or_amount: 数量・金額のどちらも空欄で単価だけが入っている行
+      // （見積表内の未使用の参考単価行）を除外する。数量が空欄でも金額が明記されている
+      // 一式扱いの行（配管工費など）は対象外とし、正しく取り込む。
+      if(effVm.require_qty_or_amount && !qty && !amount) return;
+      // 金額はあるが数量が空欄の行（値引き等の一括調整行）は数量を1として扱う（ANDPADで数量は必須のため）
+      // no_qty_fallback指定時は、数量が空欄の行に「1」を自動補完しない。
+      // ただし「単価」列ではなく「金額」列だけで金額が決まっている行（端数調整等の
+      // 一括調整額）は、数量を空欄のままにすると合計から漏れてしまうため対象外とする
+      // （単価が参考掲載されているだけで数量未定の行にのみ適用する）。
+      const qtyResolved = (effVm.no_qty_fallback && uprice)
+        ? qty
+        : (qty || (costPrice ? 1 : qty));
+
+      let estPrice = costPrice ? Math.round(Number(costPrice)/0.8) : '';
+      // cost_price_pct_by_prefix: 元の単価を定価とし、指定列（品番等）の先頭2文字に応じた掛け率で原単価を再計算する
+      let listPriceOverride = '';
+      if(effVm.cost_price_pct_by_prefix && costPrice) {
+        const cfg = effVm.cost_price_pct_by_prefix;
+        const rawCode = String(row[cfg.sourceCol]||'').trim().toUpperCase();
+        const prefix2 = rawCode.slice(0,2);
+        const pct = (cfg.rules[prefix2] !== undefined) ? cfg.rules[prefix2] : cfg.defaultPct;
+        listPriceOverride = costPrice;
+        costPrice = Math.round(Number(costPrice) * pct);
+        estPrice = costPrice ? Math.round(Number(costPrice)/0.8) : '';
+      }
+
+      // 規格・寸法（〃引き継ぎ）
+      let spec = effVm.col_spec >= 0 ? getCol(effVm.col_spec) : '';
+      if(effVm.col_spec2) {
+        const specParts = effVm.col_spec2.map(ci=>getCol(ci));
+        // t=で始まる場合は×なしで連結
+        if(specParts[0] && specParts[0].startsWith('t=')) {
+          spec = specParts.filter(Boolean).join('');
+        } else {
+          spec = specParts.filter(Boolean).join('×');
+        }
+      }
+      if(effVm.ditto) {
+        if(/^[〃″"]+$/.test(spec.replace(/[\s\u3000]/g,''))) spec = lastSpec;
+        else if(spec) lastSpec = spec;
+      }
+
+      const note = effVm.col_note >= 0 ? getCol(effVm.col_note) : '';
+      // 備考2（〃引き継ぎ）
+      let note2 = effVm.col_note2 >= 0 ? getCol(effVm.col_note2) : '';
+      if(effVm.ditto) {
+        if(/^[〃″"]+$/.test(note2.replace(/[\s\u3000]/g,''))) note2 = lastNote2;
+        else if(note2) lastNote2 = note2;
+      }
+
+      // 工事区分（カテゴリ行：数量も金額もない）
+      if(!qty && !uprice && !amount && name && !effVm.col_cat) {
+        lastCat = name; return;
+      }
+
+      let displayName = name;
+      if(effVm.strip_num_prefix_cat) displayName = displayName.replace(/^（[0-9０-９]+）\s*/, '');
+      // strip_parens: 摘要中の（）括弧書き部分を除去する
+      if(effVm.strip_parens) displayName = displayName.replace(/[（(][^）)]*[）)]/g, '').trim();
+      // strip_name_regex: 摘要の先頭等、指定した正規表現に一致する部分を除去する（汎用）
+      if(effVm.strip_name_regex) displayName = displayName.replace(effVm.strip_name_regex, '').trim();
+      // name_prefix_col: 別列の値（例：区分）をフォルダ分けには使わず、摘要の先頭に残す
+      if(effVm.name_prefix_col >= 0) {
+        const prefixVal = getCol(effVm.name_prefix_col);
+        if(prefixVal) displayName = prefixVal + (effVm.name_prefix_sep || '　') + displayName;
+      }
+      // name_carry_cols: 摘要を、複数列の値（最初の行にしか入っていない列は直前の値を引き継ぐ）を
+      // 組み合わせて作る（トレドの「部屋名＋位置」等、col_nameとは別の列群から摘要を組み立てるケース向け）
+      if(effVm.name_carry_cols) {
+        const parts = effVm.name_carry_cols.map(ci => {
+          const v = getCol(ci);
+          if(v) nameCarryState[ci] = v;
+          return nameCarryState[ci] || '';
+        });
+        displayName = parts.filter(Boolean).join(effVm.name_carry_sep || '　');
+      }
+      // note1_cols: 備考1を、複数列の値（引き継ぎなし・空欄は無視）を組み合わせて作る
+      let spec1Override = null;
+      if(effVm.note1_cols) {
+        spec1Override = effVm.note1_cols.map(ci => getCol(ci)).filter(Boolean).join(effVm.note1_cols_sep || '　');
+      }
+      // note2_extra_col: 備考2に、寸法(spec)や別列の値を組み合わせて設定する
+      if(effVm.note2_extra_col >= 0) {
+        const extra = getCol(effVm.note2_extra_col);
+        const base = effVm.note2_include_spec ? spec : note2;
+        note2 = [base, extra].filter(Boolean).join(effVm.note2_extra_sep || '　');
+      }
+      const folder1Val = effVm.cat_to_folder2 ? (vm.cat_label || sName) : lastCat;
+      const folder2Val = effVm.col_group_marker >= 0 ? lastGroupLabel : (effVm.cat_to_folder2
+        ? (effVm.fixed_folder2 ? effVm.fixed_folder2
+          : (effVm.folder2_cols ? effVm.folder2_cols.map(ci => getCol(ci)).filter(Boolean).join(effVm.folder2_cols_sep || '_')
+          : (effVm.folder2_from_name ? ((effVm.folder2_prefix||'') + (effVm.folder2_truncate_regex ? displayName.split(effVm.folder2_truncate_regex)[0] : displayName)) : lastCat)))
+        : '');
+      const r = makeRow(folder1Val, displayName, spec1Override !== null ? spec1Override : spec, qtyResolved, unit, costPrice, estPrice, note, folder2Val);
+      if(note2) r.note2 = note2;
+      if(listPriceOverride) r.list_price = String(listPriceOverride);
+      // 定価列がある場合
+      if(effVm.col_list_price >= 0) {
+        const lp = getNum(effVm.col_list_price);
+        if(lp) r.list_price = String(lp);
+      }
+      items.push(r);
+    });
+  });
+  // extra_scans: 同一シート内に別レイアウトの表がもう1つ存在する場合、
+  // 追加の列構成で同じシートをもう一度スキャンして項目を拾う
+  // （小林産業の積算シート内「羽柄加工代金」表など、メインの表とは別の列位置にある内訳表向け）
+  if(vm.extra_scans) {
+    vm.extra_scans.forEach(scan => {
+      const sheet = sheetsData.find(s => s.name === scan.sheet);
+      if(!sheet) return;
+      let headerFound = !scan.headerKeyword;
+      sheet.raw.forEach(rowIn => {
+        const row = rowIn.map(c=>c===null||c===undefined?'':c);
+        if(!headerFound) {
+          if(row.some(c => String(c).includes(scan.headerKeyword))) headerFound = true;
+          return;
+        }
+        if(scan.headerKeyword && row.some(c => String(c).includes(scan.headerKeyword))) return;
+        const getCol = (ci) => { if(ci<0||ci>=row.length) return ''; const v=String(row[ci]||''); return v.split(/[\r\n]+/).pop().trim(); };
+        const getNum = (ci) => { if(ci<0||ci>=row.length) return ''; const rv=row[ci]; if(typeof rv==='number') return rv!==0?rv:''; const v=String(rv||'').trim(); if(!v) return ''; return parseFloat(v.replace(/[,，￥¥円\s]/g,''))||''; };
+        const name = getCol(scan.col_name);
+        if(!name) return;
+        if(skipPat.test(name.replace(/[\s＊*]/g,''))) return;
+        const qty = getNum(scan.col_qty);
+        const uprice = scan.col_uprice>=0 ? getNum(scan.col_uprice) : '';
+        const amount = scan.col_amount>=0 ? getNum(scan.col_amount) : '';
+        const costPrice = uprice || amount || '';
+        if(!qty || !costPrice) return; // この用途では数量・単価の両方が揃っている行のみ実項目として採用する
+        const unit = scan.col_unit>=0 ? getCol(scan.col_unit) : '';
+        const est = Math.round(Number(costPrice)/0.8);
+        const displayName = scan.strip_parens ? name.replace(/[（(][^）)]*[）)]/g, '').trim() : name;
+        items.push(makeRow(scan.cat_label || vm.cat_label, displayName, '', qty, unit, costPrice, est, ''));
+      });
+    });
+  }
+  items.forEach(r => { Object.assign(r, splitNote1(r.note1, r.note2)); });
+  // net_ratio_pricing: シート内の「NET」金額を見つけ、抽出した品目合計との比率を求めて、
+  // 各品目の金額に同じ比率を掛けて原単価を再計算する（元の金額は定価として保持）
+  if(vm.net_ratio_pricing) {
+    let netValue = null;
+    outer:
+    for(const sheet of sheetsData) {
+      for(const row of sheet.raw) {
+        for(const cell of row) {
+          const m = String(cell||'').match(vm.net_ratio_pricing.netCellRegex);
+          if(m) {
+            const digits = m[1].replace(/[,，]/g,'').replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0)-0xFEE0));
+            netValue = parseFloat(digits);
+            break outer;
+          }
+        }
+      }
+    }
+    if(netValue) {
+      const totalBefore = items.reduce((s,r)=> s + (parseFloat(r.cost_price)||0)*(parseFloat(r.qty)||1), 0);
+      if(totalBefore) {
+        const ratio = netValue / totalBefore;
+        items.forEach(r=>{
+          const orig = parseFloat(r.cost_price)||0;
+          if(!orig) return;
+          r.list_price = String(orig);
+          r.cost_price = String(Math.round(orig * ratio));
+          r.unit_price = calcEstPrice(r.cost_price, r.gross_rate);
+        });
+      }
+    }
+  }
+  // merge_amount_into: 指定した品目（例：値引き）の金額を、別の品目（例：諸経費）に合算して1行にまとめる
+  if(vm.merge_amount_into) {
+    const { from, to } = vm.merge_amount_into;
+    const fromIdx = items.findIndex(r => r.name === from);
+    const toIdx = items.findIndex(r => r.name === to);
+    if(fromIdx >= 0 && toIdx >= 0) {
+      const fromTotal = (parseFloat(items[fromIdx].cost_price)||0) * (parseFloat(items[fromIdx].qty)||1);
+      const toQty = parseFloat(items[toIdx].qty)||1;
+      const toCost = parseFloat(items[toIdx].cost_price)||0;
+      const mergedCost = toCost + (fromTotal / toQty);
+      items[toIdx].cost_price = String(Math.round(mergedCost));
+      items[toIdx].unit_price = calcEstPrice(items[toIdx].cost_price, items[toIdx].gross_rate);
+      items.splice(fromIdx, 1);
+    }
+  }
+  // sort_last_if_folder2_equals: フォルダ2が指定値と一致する品目をすべて末尾に並べ替える
+  // （品名ではなくフォルダ2で判定することで、同じフォルダの品目が離れた位置に残り
+  //   ANDPAD側でフォルダが2つに分裂してしまう問題を防ぐ。他の項目の相対順序は維持）
+  if(vm.sort_last_if_folder2_equals) {
+    const kw = vm.sort_last_if_folder2_equals;
+    const head = items.filter(r => r.folder2 !== kw);
+    const tail = items.filter(r => r.folder2 === kw);
+    return head.concat(tail);
+  }
+  // folder1_sort_order: 実際のシート処理順に関わらず、フォルダ1の並び順を指定した順序に揃える
+  // （小林産業の積算シートが実ファイル上で先頭シートのため、構造材より先に処理されてしまう対策）
+  if(vm.folder1_sort_order) {
+    const order = vm.folder1_sort_order;
+    const rank = (f) => { const i = order.indexOf(f); return i === -1 ? order.length : i; };
+    return items.slice().sort((a, b) => rank(a.folder1) - rank(b.folder1));
+  }
+  return items;
+}
+
+// 備考1が長すぎる場合に、整理（重複・装飾記号の除去）した上で備考1／備考2に分割する
+function splitNote1(note1, note2existing) {
+  const MAX1 = 50; // 備考1の目安文字数
+  let t = String(note1 || '').replace(/[\u3000\s]+/g, '　').trim();
+  // 装飾的な箇条書き記号や重複セグメントを整理
+  let segs = t.split('　').filter(Boolean).map(s => s.replace(/^[・･]/, ''));
+  const seen = new Set();
+  segs = segs.filter(s => { if(seen.has(s)) return false; seen.add(s); return true; });
+  t = segs.join('　');
+  if(t.length <= MAX1) return { note1: t, note2: note2existing || '' };
+  let n1 = '', n2 = '';
+  for(const seg of segs) {
+    if(!n1) { n1 = seg; continue; }
+    if((n1 + '　' + seg).length <= MAX1) n1 += '　' + seg;
+    else n2 = n2 ? n2 + '　' + seg : seg;
+  }
+  if(note2existing) n2 = n2 ? (note2existing + '　' + n2) : note2existing;
+  return { note1: n1, note2: n2 };
+}
+
+function buildSpec(row, vm) {
+  if(vm.col_spec2) return vm.col_spec2.map(ci=>String(row[ci]||'').trim()).filter(Boolean).join('×');
+  return '';
+}
+
+// 全角英数字・記号を半角に変換（規格・型番等を半角表記に統一するため）
+function toHalfWidthAlnum(s) {
+  return String(s || '')
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    .replace(/[（]/g, '(').replace(/[）]/g, ')')
+    .replace(/[－]/g, '-').replace(/[／]/g, '/');
+}
+
+function normalizeUnit(u) {
+  let s = String(u||'').trim();
+  if(!s) return s;
+  // 半角カナ単位（ｹｰｽ等）を全角に変換
+  if(/[｡-ﾟ]/.test(s)) {
+    s = s.replace(/[ｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾊﾋﾌﾍﾎｳ][ﾞﾟ]/g, m => HALF_TO_FULL_KANA[m] || m)
+         .replace(/[ｦ-ﾟ]/g, m => HALF_TO_FULL_KANA[m] || m);
+  }
+  // 単位「S」「Ｓ」は「セット」として扱う
+  if(/^[SＳ]$/.test(s)) return 'セット';
+  // 単位「箇所」は「ヶ所」として扱う
+  if(s === '箇所') return 'ヶ所';
+  // 単位「ケ」は「ヶ」として扱う
+  if(s === 'ケ') return 'ヶ';
+  // 単位「t」（トン）は全角「ｔ」に統一する
+  if(/^[tT]$/.test(s)) return 'ｔ';
+  // ANDPAD側の単位マスターは m2 / m3 / m を半角で登録しているため、
+  // ㎡・㎥・全角ｍ・上付き²³ など全てのバリエーションを半角の m2 / m3 / m に統一する。
+  s = s.replace(/㎥|[ｍＭmM][3３]|[mM]³/g, 'm3')
+       .replace(/㎡|[ｍＭmM][2２]|[mM]²/g, 'm2')
+       .replace(/[ｍＭ]/g, 'm'); // m2/m3 変換後に残った単独の全角ｍ・Ｍを半角mに統一
+  return s;
+}
+
+// 半角カナ・半角英数記号を全角に変換（摘要・フォルダ名はANDPAD側で全角表示にするため）
+const HALF_TO_FULL_KANA = {
+  'ｶﾞ':'ガ','ｷﾞ':'ギ','ｸﾞ':'グ','ｹﾞ':'ゲ','ｺﾞ':'ゴ','ｻﾞ':'ザ','ｼﾞ':'ジ','ｽﾞ':'ズ','ｾﾞ':'ゼ','ｿﾞ':'ゾ',
+  'ﾀﾞ':'ダ','ﾁﾞ':'ヂ','ﾂﾞ':'ヅ','ﾃﾞ':'デ','ﾄﾞ':'ド','ﾊﾞ':'バ','ﾋﾞ':'ビ','ﾌﾞ':'ブ','ﾍﾞ':'ベ','ﾎﾞ':'ボ',
+  'ﾊﾟ':'パ','ﾋﾟ':'ピ','ﾌﾟ':'プ','ﾍﾟ':'ペ','ﾎﾟ':'ポ','ｳﾞ':'ヴ',
+  'ｱ':'ア','ｲ':'イ','ｳ':'ウ','ｴ':'エ','ｵ':'オ',
+  'ｶ':'カ','ｷ':'キ','ｸ':'ク','ｹ':'ケ','ｺ':'コ',
+  'ｻ':'サ','ｼ':'シ','ｽ':'ス','ｾ':'セ','ｿ':'ソ',
+  'ﾀ':'タ','ﾁ':'チ','ﾂ':'ツ','ﾃ':'テ','ﾄ':'ト',
+  'ﾅ':'ナ','ﾆ':'ニ','ﾇ':'ヌ','ﾈ':'ネ','ﾉ':'ノ',
+  'ﾊ':'ハ','ﾋ':'ヒ','ﾌ':'フ','ﾍ':'ヘ','ﾎ':'ホ',
+  'ﾏ':'マ','ﾐ':'ミ','ﾑ':'ム','ﾒ':'メ','ﾓ':'モ',
+  'ﾔ':'ヤ','ﾕ':'ユ','ﾖ':'ヨ',
+  'ﾗ':'ラ','ﾘ':'リ','ﾙ':'ル','ﾚ':'レ','ﾛ':'ロ',
+  'ﾜ':'ワ','ｦ':'ヲ','ﾝ':'ン',
+  'ｧ':'ァ','ｨ':'ィ','ｩ':'ゥ','ｪ':'ェ','ｫ':'ォ','ｯ':'ッ','ｬ':'ャ','ｭ':'ュ','ｮ':'ョ',
+  'ｰ':'ー','｡':'。','｢':'「','｣':'」','､':'、','･':'・'
+};
+function toFullWidth(str) {
+  if(!str) return '';
+  let s = String(str);
+  // 濁点・半濁点付きの2文字を先に変換
+  s = s.replace(/[ｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾊﾋﾌﾍﾎｳ][ﾞﾟ]/g, m => HALF_TO_FULL_KANA[m] || m);
+  // 残りの半角カナを変換
+  s = s.replace(/[ｦ-ﾟ]/g, m => HALF_TO_FULL_KANA[m] || m);
+  // 半角英数字・記号を全角に変換
+  s = s.replace(/[A-Za-z0-9!-/:-@\[-`{-~]/g, m => String.fromCharCode(m.charCodeAt(0) + 0xFEE0));
+  // 半角スペースを全角スペースに変換
+  s = s.replace(/ /g, '　');
+  return s;
+}
+
+function makeRow(cat, name, spec, qty, unit, costPrice, estPrice, note, folder2) {
+  const r = {}; ANDPAD_COLS.forEach(k=>r[k]='');
+  return Object.assign(r, {
+    folder1: toFullWidth(cat), folder2: toFullWidth(folder2||''), name: toFullWidth(name), note1: String(spec||''),
+    cost_price: String(costPrice||''), gross_rate: DEFAULT_GROSS,
+    unit_price: String(estPrice||''), qty: String(qty||''),
+    unit: normalizeUnit(unit) || '式', memo: String(note||''),
+    pdf_display: '表示する'
+  });
+}
+
+// ─── AI汎用パース（未登録業者） ────────────────────
+function aiFallbackParse(sheetsData) {
+  const items = [];
+  const skipPat = /^(合\s*計|小\s*計|計|消費税|税込|合計金額)/;
+  sheetsData.forEach(({ name: sName, raw }) => {
+    raw.forEach(row => {
+      const cells = row.map(c=>String(c||'').trim());
+      const name = cells.find(c=>c.length>1 && !/^\d+\.?\d*$/.test(c) && !skipPat.test(c));
+      if(!name) return;
+      const nums = cells.map(c=>parseFloat(c.replace(/[,￥¥円]/g,''))).filter(n=>!isNaN(n)&&n>0&&n<1e8);
+      if(!nums.length) return;
+      const costPrice = nums[nums.length>1?nums.length-2:0] || '';
+      const estPrice  = costPrice ? Math.round(Number(costPrice)/0.8) : '';
+      items.push(makeRow(sName, name, '', '', '式', costPrice, estPrice, ''));
+    });
+  });
+  return items;
+}
+
+async function aiAnalyze(targetSheets) {
+  const msgs = [['AIが解析中...','フォーマットを自動認識しています'],['項目を識別中...','もう少しお待ちください']];
+  let mi=0;
+  const iv=setInterval(()=>{ mi=(mi+1)%msgs.length; document.getElementById('loadingMsg').textContent=msgs[mi][0]; document.getElementById('loadingSub').textContent=msgs[mi][1]; },1000);
+
+  // 〃展開
+  function expandDitto(raw) {
+    let last=['','',''], lu='';
+    return raw.map(row=>{
+      const r=[...row];
+      for(let ci=0;ci<=2;ci++){const v=String(r[ci]||'').trim();if(/^[〃″"]$/.test(v))r[ci]=last[ci];else if(v)last[ci]=v;}
+      const u=String(r[6]||'').trim();if(/^[〃″"]$/.test(u))r[6]=lu;else if(u)lu=u;
+      return r;
+    });
+  }
+
+  const payload = targetSheets.map(s=>({ name:s.name, raw:expandDitto(s.raw).slice(0,80) }));
+  const prompt = `業者見積書エクセルのデータです。\n\n${payload.map(s=>`【${s.name}】\n${JSON.stringify(s.raw)}`).join('\n\n')}\n\n全明細行を抽出し、JSONのみ返してください。\n{"items":[{"folder1":"工事区分","folder2":"","folder3":"","folder4":"","name":"品名","place":"","type":"","note1":"規格・寸法","note2":"","list_price":"","wholesale_rate":"","discount_rate":"","cost_price":"単価の数値","gross_rate":"20","unit_price":"単価÷0.8の整数","qty":"数量","unit":"単位","supplier_id":"","supplier_mgr_id":"","supplier_name":"","memo":"備考","pdf_display":"表示する","master_id":""}],"summary":"一言"}\n除外:合計・小計・ヘッダー・社名行。cost_price=単価列の数値のみ。unit=単位列の値(〃は前行引き継ぎ)。`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    clearInterval(iv);
+    const result = await res.json();
+    let parsed;
+    try {
+      const text = result.content.map(c=>c.text||'').join('');
+      parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
+    } catch { parsed = { items: aiFallbackParse(targetSheets), summary: '項目を抽出しました。内容を確認してください。' }; }
+    applyResults(parsed.items, parsed.summary||`${parsed.items.length}件を検出しました。`, 'AI汎用解析', targetSheets);
+  } catch(err) {
+    clearInterval(iv);
+    const items = aiFallbackParse(targetSheets);
+    applyResults(items, `${items.length}件を検出しました（内容を確認してください）。`, 'AI汎用解析', targetSheets);
+  }
+}
+
+// ─── 結果適用 ─────────────────────────────────────
+function applyResults(items, summary, method, targetSheets) {
+  rows = items.map((item,i) => {
+    const r = {_id:i}; ANDPAD_COLS.forEach(k=>r[k]=String(item[k]||''));
+    if(!r.gross_rate) r.gross_rate = DEFAULT_GROSS;
+    if(!r.unit) r.unit = '式';
+    if(!r.unit_price && r.cost_price) r.unit_price = calcEstPrice(r.cost_price, r.gross_rate);
+    return r;
+  });
+
+  // add_discount_rowフラグがある業者のみ出精値引き行を末尾に追加（重複防止）
+  if(detectedVendor && detectedVendor.add_discount_row) {
+    const alreadyHas = rows.some(r => r.name === '出精値引き');
+    if(!alreadyHas) {
+      const discountRow = {}; ANDPAD_COLS.forEach(k=>discountRow[k]='');
+      Object.assign(discountRow, {
+        _id: Date.now(),
+        folder1: rows.length > 0 ? rows[0].folder1 : '',
+        name: '出精値引き',
+        qty: '1', unit: '式',
+        cost_price: '', gross_rate: DEFAULT_GROSS, unit_price: '',
+        pdf_display: '表示する'
+      });
+      rows.push(discountRow);
+    }
+  }
+  // 単位〃後処理 + ㎥正規化
+  let lu='';
+  rows.forEach(r=>{
+    r.unit = normalizeUnit(r.unit);
+    const u=r.unit.replace(/[\s\u3000]/g,'');
+    if(/^[〃″"]$/.test(u))r.unit=lu||'式';else if(u)lu=u;
+  });
+
+  document.getElementById('aiNote').textContent = summary;
+  document.getElementById('methodLabel').textContent = method;
+  if(targetSheets) document.getElementById('sheetListLabel').textContent = '取り込みシート: '+targetSheets.map(s=>s.name).join(' / ');
+  renderTable(); showStep(4);
+}
+
+function calcEstPrice(costPrice, grossRate) {
+  const c=parseFloat(String(costPrice).replace(/,/g,''))||0;
+  const g=parseFloat(String(grossRate).replace(/,/g,''))||0;
+  if(!c) return '';
+  if(g>=100) return String(c);
+  return String(Math.round(c/(1-g/100)));
+}
+
+// ─── テーブル描画 ─────────────────────────────────
+function esc(v){return String(v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  rows.forEach((row,idx) => {
+    const pdfOpts = PDF_OPTS.map(o=>`<option value="${esc(o)}"${row.pdf_display===o?' selected':''}>${esc(o)}</option>`).join('');
+    const tr = document.createElement('tr'); tr.dataset.idx=idx;
+    tr.innerHTML = `
+      <td><input class="ci" value="${esc(row.folder1)}" data-f="folder1"/></td>
+      <td><input class="ci" value="${esc(row.folder2)}" data-f="folder2"/></td>
+      <td><input class="ci" value="${esc(row.folder3)}" data-f="folder3"/></td>
+      <td><input class="ci" value="${esc(row.folder4)}" data-f="folder4"/></td>
+      <td><input class="ci" value="${esc(row.name)}" data-f="name"/></td>
+      <td><input class="ci" value="${esc(row.place)}" data-f="place"/></td>
+      <td><input class="ci" value="${esc(row.type)}" data-f="type"/></td>
+      <td><input class="ci" value="${esc(row.note1)}" data-f="note1"/></td>
+      <td><input class="ci" value="${esc(row.note2)}" data-f="note2"/></td>
+      <td><input class="ci ci-r" value="${esc(row.list_price)}" data-f="list_price"/></td>
+      <td><input class="ci ci-r" value="${esc(row.wholesale_rate)}" data-f="wholesale_rate"/></td>
+      <td><input class="ci ci-r" value="${esc(row.discount_rate)}" data-f="discount_rate"/></td>
+      <td><input class="ci ci-r" value="${esc(row.cost_price)}" data-f="cost_price"/></td>
+      <td><input class="ci ci-r" value="${esc(row.gross_rate)}" data-f="gross_rate"/></td>
+      <td><input class="ci ci-r" value="${esc(row.unit_price)}" data-f="unit_price" data-computed/></td>
+      <td><input class="ci ci-r" value="${esc(row.qty)}" data-f="qty"/></td>
+      <td><input class="ci" value="${esc(row.unit)}" data-f="unit"/></td>
+      <td><input class="ci" value="${esc(row.supplier_id)}" data-f="supplier_id"/></td>
+      <td><input class="ci" value="${esc(row.supplier_mgr_id)}" data-f="supplier_mgr_id"/></td>
+      <td><input class="ci" value="${esc(row.supplier_name)}" data-f="supplier_name"/></td>
+      <td><input class="ci" value="${esc(row.memo)}" data-f="memo"/></td>
+      <td><select class="cs" data-f="pdf_display">${pdfOpts}</select></td>
+      <td><input class="ci" value="${esc(row.master_id)}" data-f="master_id"/></td>
+      <td><button class="del-btn" data-del="${idx}" title="削除"><i class="ti ti-x"></i></button></td>
+    `;
+    tr.querySelectorAll('input[data-f],select[data-f]').forEach(el=>{
+      el.addEventListener('input', ()=>handleChange(idx,el.dataset.f,el.value));
+      el.addEventListener('change', ()=>{
+        let v = el.value;
+        // 単位は正規化（㎡等→半角m2, ㎥等→半角m3, 全角ｍ→半角m）した上で反映。空欄なら既定値「式」を補完
+        if(el.dataset.f==='unit') { v = v.trim() ? normalizeUnit(v) : '式'; el.value = v; }
+        handleChange(idx,el.dataset.f,v);
+      });
+    });
+    tr.querySelector('[data-del]').addEventListener('click', ()=>{ rows.splice(idx,1); renderTable(); });
+    tbody.appendChild(tr);
+  });
+  updateSummary();
+}
+
+function handleChange(idx,field,val) {
+  rows[idx][field]=val;
+  if(field==='cost_price'||field==='gross_rate') {
+    rows[idx].unit_price = calcEstPrice(rows[idx].cost_price, rows[idx].gross_rate);
+    const tr=document.querySelector(`#tableBody tr:nth-child(${idx+1})`);
+    if(tr){ const el=tr.querySelector('input[data-computed]'); if(el) el.value=rows[idx].unit_price; }
+  }
+  updateSummary();
+}
+
+function updateSummary() {
+  let total=0;
+  // 合計金額 = 原単価 × 数量
+  rows.forEach(r=>{ const p=parseFloat(String(r.cost_price||'').replace(/,/g,''))||0; const q=parseFloat(String(r.qty||'').replace(/,/g,''))||0; total+=p*q; });
+  document.getElementById('rowCount').textContent=rows.length;
+  document.getElementById('totalAmount').textContent=total>0?'¥'+Math.round(total).toLocaleString():'—';
+}
+
+function addRow() {
+  const r={_id:Date.now()}; ANDPAD_COLS.forEach(k=>r[k]='');
+  r.gross_rate=DEFAULT_GROSS; r.pdf_display='表示する'; r.unit='式';
+  rows.push(r); renderTable();
+  const trs=document.querySelectorAll('#tableBody tr');
+  if(trs.length) trs[trs.length-1].querySelector('input[data-f="name"]').focus();
+}
+
+function exportCSV() {
+  // 単位を最終正規化（㎡等→半角m2, ㎥等→半角m3, 全角ｍ→半角m）し、空欄は既定値「式」を補完する
+  let filled=false;
+  rows.forEach(r=>{
+    const before = r.unit;
+    r.unit = String(r.unit||'').trim() ? normalizeUnit(r.unit) : '式';
+    if(r.unit !== before) filled=true;
+  });
+  if(filled) renderTable();
+  const data=rows.map(r=>ANDPAD_COLS.map(k=>String(r[k]||'').replace(/,/g,'')));
+  const bom='\uFEFF';
+  const csv=bom+[ANDPAD_HEADERS,...data].map(row=>row.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  const a=document.createElement('a'); a.href=url;
+  a.download=`ANDPAD_見積_${currentFileName.replace(/\.[^.]+$/,'')}.csv`;
+  a.click(); URL.revokeObjectURL(url); showStep(5);
+}
+
+function resetAll() {
+  rows=[]; currentFileName=''; allSheets=[]; selSheets.clear(); detectedVendor=null;
+  document.getElementById('fileInput').value=''; showStep(1);
+}
+</script>
+</body>
+</html>
