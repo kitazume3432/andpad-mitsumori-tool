@@ -105,7 +105,7 @@ tr:hover td { background: #fafaf8; }
   <div class="step active" id="step1">
     <div class="info-box" style="margin-bottom:1rem;">
       <strong><i class="ti ti-file-type-pdf"></i> PDFを直接変換できる業者：</strong>
-      砂山電気／グラフテクト（GRAFTEKT）／東京暖炉／長岡タイル工業<br>
+      砂山電気／グラフテクト（GRAFTEKT）／東京暖炉／長岡タイル工業／フジモク（解体工事）<br>
       <span style="color:#999;">上記4社のPDFはこのツールにそのままアップロードできます。</span><br>
       <strong>それ以外の画像PDF業者（ジオック技研／ＮＣＮ概算見積／岩瀬産業の建具明細など）</strong>は、
       文字が埋め込まれていないスキャンPDFのため、先にclaude.aiの「画像PDF見積変換」プロジェクトで
@@ -360,7 +360,7 @@ const VENDOR_MAPS = [
       '見積書': {
         headerKeyword: '工事項目',
         col_name: 0, col_spec: -1, col_qty: 10, col_unit: 12, col_uprice: -1, col_amount: 15, col_note: -1,
-        skip_name_regex: /^（[12１２]）/,
+        skip_name_regex: /^[（(][12１２][）)]/,
         fixed_folder2: '諸経費'
       }
     }
@@ -697,6 +697,15 @@ const VENDOR_MAPS = [
     sheet: ['御見積書', 'Sheet1'],
     headerKeyword: '摘要'
   },
+  {
+    // フジモク（解体工事）はPDFに文字が埋め込まれているためPDF直接取込に対応。
+    // フォルダ1「解体工事」固定、フォルダ2に施工名区分（仮設工事／本体工事／外壁材／外構撤去／その他）を入れる
+    name: ['フジモク', '株式会社フジモク'],
+    verified: true,
+    pdf_supported: true,
+    sheet: ['御見積書', 'Sheet1'],
+    headerKeyword: '施工名'
+  },
 ];
 
 const ANDPAD_COLS = ['folder1','folder2','folder3','folder4','name','place','type','note1','note2','list_price','wholesale_rate','discount_rate','cost_price','gross_rate','unit_price','qty','unit','supplier_id','supplier_mgr_id','supplier_name','memo','pdf_display','master_id'];
@@ -826,6 +835,7 @@ const VENDOR_SIGNATURES = [
   { name: 'ジオック技研',      sig: ['ジオック技研'] },
   { name: 'ＮＣＮ概算',        sig: ['エヌ・シー・エヌ', '指定粗利率'] },
   { name: '長岡タイル',        sig: ['長岡タイル工業'] },
+  { name: 'フジモク',          sig: ['株式会社フジモク'] },
 ];
 
 function detectVendor(fname, allSheets) {
@@ -1131,6 +1141,35 @@ function parseNagaokaPdf(fullText) {
   return items;
 }
 
+// フジモク（解体工事）PDF専用パーサー：施工名（仮設工事／本体工事／外壁材／外構撤去／その他）ごとに
+// 明細行（工事名・数量・単位・単価・金額・備考）が並ぶ表形式。施工名セルは同区分の先頭行にのみ
+// 現れる（縦結合セル）ため、現れた時点で区分を更新し、以降は前回の区分を引き継ぐ。
+function parseFujimokuPdf(fullText) {
+  const items = [];
+  const lines = fullText.split('\n');
+  let currentCat = '';
+  const catList = '仮設工事|本体工事|外壁材|外構撤去|その他';
+  const unitList = '㎡|ケ|ヶ|式|検体|kg|t|本|台|箇所|ｍ|m2|m';
+  const lineRe = new RegExp('^(?:(' + catList + ')\\s*)?(.+?)\\s+(-?[\\d,]+\\.?\\d*)\\s+(' + unitList + ')\\s+(-?[\\d,]+)\\s+(-?[\\d,]+)\\s*(.*)$');
+
+  lines.forEach(line => {
+    if (!line.trim()) return;
+    const m = line.match(lineRe);
+    if (!m) return;
+    const [, cat, nameRaw, qtyStr, unit, upriceStr, , remark] = m;
+    if (cat) currentCat = cat;
+    const name = nameRaw.trim();
+    const qty = parseFloat(qtyStr.replace(/,/g, ''));
+    const uprice = parseInt(upriceStr.replace(/,/g, ''), 10);
+    if (!qty || isNaN(uprice)) return;
+    const sign = uprice < 0 ? -1 : 1;
+    const est = Math.round(Math.abs(uprice) / 0.8) * sign;
+    const r = makeRow('解体工事', name, remark ? remark.trim() : '', qty, unit, uprice, est, '', currentCat || '本体工事');
+    items.push(r);
+  });
+  return items;
+}
+
 // 砂山電気 PDF専用パーサー：3ページ目以降の部材・労務費レベルの詳細内訳を抽出し、
 // カテゴリ名（引込幹線設備工事等）をフォルダ2として分類する。
 // 諸経費・値引きは1ページ目（サマリー）から取得する。
@@ -1201,6 +1240,10 @@ function handlePdfFile(file) {
       detectedVendor = vm;
       const items = parseSunayamaPdf(fullText);
       applyResults(items, `${items.length}件を検出しました。`, '砂山電気 PDF専用解析', null);
+    } else if(vm && vm.name.includes('フジモク')) {
+      detectedVendor = vm;
+      const items = parseFujimokuPdf(fullText);
+      applyResults(items, `${items.length}件を検出しました。`, 'フジモク PDF専用解析', null);
     } else {
       detectedVendor = null;
       aiAnalyzePdfText(fullText);
@@ -1787,7 +1830,7 @@ function mappingParse(sheetsData, vm) {
           const hasOther = [effVm.col_spec, effVm.col_qty, effVm.col_unit, effVm.col_uprice, effVm.col_amount]
             .some(ci => ci >= 0 && getCol(ci));
           if(!hasOther) {
-            lastCat = effVm.strip_num_prefix_cat ? t.replace(/^（[0-9０-９]+）\s*/, '') : t;
+            lastCat = effVm.strip_num_prefix_cat ? t.replace(/^[（(][0-9０-９]+[）)]\s*/, '') : t;
             lastRoomLabel = '';
             return;
           }
@@ -2067,7 +2110,7 @@ function mappingParse(sheetsData, vm) {
       }
 
       let displayName = name;
-      if(effVm.strip_num_prefix_cat) displayName = displayName.replace(/^（[0-9０-９]+）\s*/, '');
+      if(effVm.strip_num_prefix_cat) displayName = displayName.replace(/^[（(][0-9０-９]+[）)]\s*/, '');
       // strip_parens: 摘要中の（）括弧書き部分を除去する
       if(effVm.strip_parens) displayName = displayName.replace(/[（(][^）)]*[）)]/g, '').trim();
       // strip_name_regex: 摘要の先頭等、指定した正規表現に一致する部分を除去する（汎用）
