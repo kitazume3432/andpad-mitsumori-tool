@@ -1,5 +1,5 @@
 ============================================== 
-Update started: 令和8年09月10日 木 17:11:09.27 
+Update started: 令和8年11月17日 火 21:01:48.72 
 Folder: Z:\andpad-mitsumori-tool 
 ============================================== 
-Overwrote index.html with: 業者見積取り込みツール (2).html 
+Overwrote index.html with: 業者見積取り込みツール (3).html 

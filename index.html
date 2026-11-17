@@ -866,6 +866,18 @@ function detectVendor(fname, allSheets) {
     }
   }
 
+  // 完全一致で見つからない場合のみ、空白（全角・半角）の違いを無視して再判定する
+  // （同じ業者でも「四 季」「四　季」のようにファイルごとに空白の入れ方が異なるため）
+  const squash = s => String(s).replace(/[\s\u3000]+/g, '');
+  const fullSquashed = squash(fullText);
+  for(const sig of VENDOR_SIGNATURES) {
+    if(sig.sig.every(keyword => fullSquashed.includes(squash(keyword)))) {
+      let vm = VENDOR_MAPS.find(v => v.name.includes(sig.name));
+      if(!vm) vm = VENDOR_MAPS.find(v => sig.name.includes(v.name[0]));
+      if(vm) return vm;
+    }
+  }
+
   return null;
 }
 
