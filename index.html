@@ -509,7 +509,8 @@ const VENDOR_MAPS = [
     headerKeyword: '品名・寸法',
     col_name: 0, col_spec: -1, col_qty: 5, col_unit: 6, col_uprice: 7, col_amount: 8, col_note: 10,
     col_cat: -1, cat_label: '太陽光発電システム工事',
-    two_row_name: true, cat_bracket: true, single_folder: true
+    two_row_name: true, cat_bracket: true, single_folder: true,
+    note_to_note2: true
   },
   {
     name: ['岩瀬産業'],
@@ -519,7 +520,8 @@ const VENDOR_MAPS = [
     col_name: 0, col_spec: -1, col_qty: 5, col_unit: 6, col_uprice: 7, col_amount: 8, col_note: 10,
     col_list_price: 11,
     col_cat: -1, cat_label: '住設機器',
-    two_row_name: true, cat_bracket: true
+    two_row_name: true, cat_bracket: true,
+    note_to_note2: true
   },
   {
     name: ['ＮＣＮ', 'NCN'],
@@ -1991,7 +1993,12 @@ function mappingParse(sheetsData, vm) {
           const mappedCat = (effVm.cat_label_map && effVm.cat_label_map[lastCat] !== undefined) ? effVm.cat_label_map[lastCat] : lastCat;
           const folder1Val = effVm.cat_to_folder2 ? (vm.cat_label || sName) : mappedCat;
           const folder2Val = effVm.cat_to_folder2 ? mappedCat : '';
-          const newItem = makeRow(folder1Val, name, spec, qty, unit, costPrice, estPrice, getCol(effVm.col_note), folder2Val);
+          // note_to_note2: 備考列の内容をメモではなく「備考2」に入れる（岩瀬産業）。
+          // 小計行の「定価小計」ラベルは備考ではないので除外する
+          let noteVal = getCol(effVm.col_note);
+          if(effVm.note_to_note2 && /^定価小計/.test(String(noteVal).trim())) noteVal = '';
+          const newItem = makeRow(folder1Val, name, spec, qty, unit, costPrice, estPrice, effVm.note_to_note2 ? '' : noteVal, folder2Val);
+          if(effVm.note_to_note2) newItem.note2 = noteVal;
           if(effVm.col_list_price >= 0) {
             const lp = getNum(effVm.col_list_price);
             if(lp) newItem.list_price = String(lp);
